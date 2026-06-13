@@ -77,6 +77,7 @@ public:
         CMsgGCItemCustomizationNotification &notification);
 
     const CSOEconItem *GetItem(uint64_t itemId) const;
+    bool BuildPreviewDataBlock(uint64_t itemId, CEconItemPreviewDataBlock &block);
     const ItemSchema &GetItemSchema() const { return m_itemSchema; }
 
     bool TradeUp(const std::vector<uint64_t> &inputItemIds,

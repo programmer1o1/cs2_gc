@@ -57,6 +57,7 @@ private:
 
     void ReloadInventory();
     void HandleMatchEndRunRewardDrops();
+    void HandleEconPreviewDataBlockRequest(GCMessageRead &messageRead);
     void HandleRoundEnd();
     void SendXpUpdate();
 

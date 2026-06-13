@@ -288,6 +288,10 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
             HandleMatchEndRunRewardDrops();
             break;
 
+        case k_EMsgGCCStrike15_v2_Client2GCEconPreviewDataBlockRequest:
+            HandleEconPreviewDataBlockRequest(messageRead);
+            break;
+
         default:
             Platform::Print("ClientGC::HandleMessage: unhandled protobuf message %s\n",
                 MessageName(messageRead.TypeUnmasked()));
@@ -1239,4 +1243,26 @@ void ClientGC::HandleRoundEnd()
         xpPerRound, m_xpLevel, m_xpPoints);
     SaveProgress(m_xpLevel, m_xpPoints);
     SendXpUpdate();
+}
+
+void ClientGC::HandleEconPreviewDataBlockRequest(GCMessageRead &messageRead)
+{
+    CMsgGCCStrike15_v2_Client2GCEconPreviewDataBlockRequest request;
+    if (!messageRead.ReadProtobuf(request))
+        return;
+
+    // param_a is the asset/item id; param_s is the owner steam id (ignored — we serve from local inventory)
+    CEconItemPreviewDataBlock block;
+    if (!m_inventory.BuildPreviewDataBlock(request.param_a(), block))
+    {
+        Platform::Print("HandleEconPreviewDataBlockRequest: item %llu not found\n", request.param_a());
+        return;
+    }
+
+    CMsgGCCStrike15_v2_Client2GCEconPreviewDataBlockResponse response;
+    *response.mutable_iteminfo() = block;
+    SendMessageToGame(false, k_EMsgGCCStrike15_v2_Client2GCEconPreviewDataBlockResponse, response,
+        messageRead.JobId());
+
+    Platform::Print("HandleEconPreviewDataBlockRequest: served item %llu\n", request.param_a());
 }

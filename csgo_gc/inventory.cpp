@@ -99,6 +99,15 @@ const CSOEconItem *Inventory::GetItem(uint64_t itemId) const
     return &it->second;
 }
 
+bool Inventory::BuildPreviewDataBlock(uint64_t itemId, CEconItemPreviewDataBlock &block)
+{
+    const CSOEconItem *item = GetItem(itemId);
+    if (!item)
+        return false;
+    ItemToPreviewDataBlock(*item, block);
+    return true;
+}
+
 CSOEconItem &Inventory::AllocateItem(uint32_t highItemId)
 {
     // Players fuck up their inventory files constantly and end up with item id collisions...
