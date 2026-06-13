@@ -46,12 +46,44 @@ static std::string GetCollectionName(const ItemSchema &schema, std::string_view 
     return schema.GetCollectionDisplayName(collectionId);
 }
 
+static constexpr const char *ProgressFilePath = "csgo_gc/progress.txt";
+
+static void LoadProgress(uint32_t configLevel, uint32_t configXp, uint32_t &outLevel, uint32_t &outXp)
+{
+    outLevel = configLevel;
+    outXp = configXp;
+
+    KeyValue kv{ "progress" };
+    if (!kv.ParseFromFile(ProgressFilePath))
+        return;
+
+    uint32_t savedLevel = kv.GetNumber<uint32_t>("player_level", 0);
+    uint32_t savedXp    = kv.GetNumber<uint32_t>("player_cur_xp", 0);
+
+    // only use saved values if they're at least as high as config (config is the floor)
+    if (savedLevel > configLevel || (savedLevel == configLevel && savedXp > configXp))
+    {
+        outLevel = savedLevel;
+        outXp    = savedXp;
+    }
+}
+
+static void SaveProgress(uint32_t level, uint32_t xp)
+{
+    KeyValue kv{ "progress" };
+    kv.AddNumber("player_level", level);
+    kv.AddNumber("player_cur_xp", xp);
+    kv.WriteToFile(ProgressFilePath);
+}
+
 ClientGC::ClientGC(uint64_t steamId)
     : m_steamId{ steamId }
     , m_inventory{ steamId }
-    , m_xpLevel{ static_cast<uint32_t>(GetConfig().Level()) }
-    , m_xpPoints{ static_cast<uint32_t>(GetConfig().Xp()) }
 {
+    LoadProgress(
+        static_cast<uint32_t>(GetConfig().Level()),
+        static_cast<uint32_t>(GetConfig().Xp()),
+        m_xpLevel, m_xpPoints);
     // also called from ServerGC's constructor
     Graffiti::Initialize();
 
@@ -1205,5 +1237,6 @@ void ClientGC::HandleRoundEnd()
 
     Platform::Print("ClientGC: round end XP +%d -> level %u points %u\n",
         xpPerRound, m_xpLevel, m_xpPoints);
+    SaveProgress(m_xpLevel, m_xpPoints);
     SendXpUpdate();
 }

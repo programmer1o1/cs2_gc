@@ -41,6 +41,7 @@ GCConfig::GCConfig()
     m_destroyUsedItems = config.GetNumber("destroy_used_items", m_destroyUsedItems);
     m_enableMatchDrops = config.GetNumber("enable_match_drops", m_enableMatchDrops);
     m_xpPerRound = config.GetNumber("xp_per_round", m_xpPerRound);
+    m_maxServerItems = config.GetNumber("max_server_items", m_maxServerItems);
 
     const KeyValue *medals = config.GetSubkey("medals");
     if (medals)

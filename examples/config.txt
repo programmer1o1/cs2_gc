@@ -34,8 +34,11 @@
 // give a random skin drop at the end of each match (requires item schema with revolving_loot_lists)
 "enable_match_drops"	"1"
 
-// XP awarded per round (set to 0 to disable progression)
+// XP awarded per round (set to 0 to disable progression); saved to csgo_gc/progress.txt
 "xp_per_round"	"150"
+
+// maximum number of equipped items accepted from a client's SO cache on the server (default 64)
+"max_server_items"	"256"
 
 // service medals / pins shown on your profile (space them out as numbered subkeys)
 // find def_indexes in items_game.txt under "items" -> item with the pin/medal name

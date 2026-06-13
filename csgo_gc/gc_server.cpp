@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "gc_server.h"
+#include "config.h"
 #include "gc_const.h"
 #include "gc_const_csgo.h"
 #include "graffiti.h"
@@ -136,8 +137,7 @@ static bool ValidateMessageOwnerSOID(GCMessageRead &messageRead, uint64_t steamI
     return true;
 }
 
-// FIXME: made up
-constexpr int MaxServerSOCacheItems = 64;
+static int MaxServerSOCacheItems() { return GetConfig().MaxServerItems(); }
 
 static bool RemoveUnequippedItems(CMsgSOCacheSubscribed &message, int &itemCount)
 {
@@ -192,9 +192,9 @@ bool ValidateMessageOwnerSOID<CMsgSOCacheSubscribed>(GCMessageRead &messageRead,
     int itemCount = 0;
     bool modified = RemoveUnequippedItems(message, itemCount);
 
-    if (itemCount > MaxServerSOCacheItems)
+    if (itemCount > MaxServerSOCacheItems())
     {
-        Platform::Print("Client %llu socache has %d items (max allowed %d), ignoring\n", itemCount, MaxServerSOCacheItems);
+        Platform::Print("Client %llu socache has %d items (max allowed %d), ignoring\n", itemCount, MaxServerSOCacheItems());
         return false;
     }
 
