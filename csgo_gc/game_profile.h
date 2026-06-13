@@ -20,15 +20,23 @@ struct GameProfile
     const char *engineModule;
 
     // Interface version strings queried from the engine factory
-    // CS2 values: run `strings engine2.dll | grep -i "manager\|engineclient"` to find them
     const char *gameEventManagerVersion;
-    const char *engineClientVersion;
+    const char *engineClientVersion; // nullptr if vtable layout is incompatible
 
     // Values sent in MatchmakingGC2ClientHello global_stats
-    uint32_t requiredAppIdVersion;   // cs:go build number the GC expects
-    uint32_t requiredAppIdVersion2;  // secondary build number (cs:go s2 / cs2)
+    uint32_t requiredAppIdVersion;   // network_protocol / build number
+    uint32_t requiredAppIdVersion2;  // secondary build number
     uint32_t pricesheetVersion;
     uint32_t activeTournamentEventId;
+
+    // CS2: local player is accessed via memory offsets rather than IVEngineClient vtable.
+    // Source: a2x/cs2-dumper offsets.rs
+    // Usage: *(client.dll + localPlayerControllerOffset) -> CCSPlayerController*
+    //        then read userId from the controller struct.
+    // 0 = not applicable (CS:GO uses IVEngineClient::GetLocalPlayer instead)
+    uintptr_t localPlayerControllerOffset; // dwLocalPlayerController in client.dll
+    uintptr_t networkGameClientOffset;     // dwNetworkGameClient in engine2.dll
+    uintptr_t networkGameClientLocalPlayer; // offset within INetworkGameClient -> local player
 };
 
 // Returns the active profile based on config "game" key

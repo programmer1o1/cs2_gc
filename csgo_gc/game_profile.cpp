@@ -3,15 +3,18 @@
 #include "config.h"
 
 const GameProfile g_profileCSGO = {
-    .mode                   = GameMode::CSGO,
-    .appId                  = 4465480,
-    .engineModule           = "engine",
+    .mode                    = GameMode::CSGO,
+    .appId                   = 4465480,
+    .engineModule            = "engine",
     .gameEventManagerVersion = "GAMEEVENTSMANAGER002",
-    .engineClientVersion    = "VEngineClient014",
-    .requiredAppIdVersion   = 13857,
-    .requiredAppIdVersion2  = 13862,
-    .pricesheetVersion      = 1680057676,
+    .engineClientVersion     = "VEngineClient014",
+    .requiredAppIdVersion    = 13857,
+    .requiredAppIdVersion2   = 13862,
+    .pricesheetVersion       = 1680057676,
     .activeTournamentEventId = 20,
+    .localPlayerControllerOffset = 0,
+    .networkGameClientOffset     = 0,
+    .networkGameClientLocalPlayer = 0,
 };
 
 // Version data sourced from CDemoFileHeader in a real CS2 demo (PBDEMS2):
@@ -28,15 +31,19 @@ const GameProfile g_profileCSGO = {
 // The engine client hook is currently a no-op for CS2 (nullptr skips it).
 // Game event registration (AddListener) also needs vtable research for CS2.
 const GameProfile g_profileCS2 = {
-    .mode                   = GameMode::CS2,
-    .appId                  = 730,
-    .engineModule           = "engine2",
+    .mode                    = GameMode::CS2,
+    .appId                   = 730,
+    .engineModule            = "engine2",
     .gameEventManagerVersion = "GameEventSystemClientV001",
-    .engineClientVersion    = nullptr, // Source2EngineToClient001 vtable incompatible; skip for now
-    .requiredAppIdVersion   = 14165,   // network_protocol from CDemoFileHeader
-    .requiredAppIdVersion2  = 10772,   // build_num from CDemoFileHeader
-    .pricesheetVersion      = 0,
+    .engineClientVersion     = nullptr, // Source2EngineToClient001 vtable incompatible; skip for now
+    .requiredAppIdVersion    = 14165,   // network_protocol from CDemoFileHeader
+    .requiredAppIdVersion2   = 10772,   // build_num from CDemoFileHeader
+    .pricesheetVersion       = 0,
     .activeTournamentEventId = 0,
+    // Source: a2x/cs2-dumper offsets.rs
+    .localPlayerControllerOffset  = 0x2320720, // dwLocalPlayerController (client.dll)
+    .networkGameClientOffset      = 0x90A1A0,  // dwNetworkGameClient (engine2.dll)
+    .networkGameClientLocalPlayer = 0xF8,       // offset within INetworkGameClient
 };
 
 const GameProfile &GetGameProfile()
