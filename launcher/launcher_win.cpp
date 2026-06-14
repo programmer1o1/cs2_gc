@@ -160,12 +160,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         _wputenv_s(L"PATH", replacePath.c_str());
     }
 
-    // tier0.dll lives next to this exe in game\bin\win64
-    _snwprintf_s(modulePath, std::size(modulePath), L"%ls\\tier0.dll", baseDir);
-    if (!LoadLibraryExW(modulePath, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH))
+    // load tier0.dll and steam_api64.dll by absolute path before loading csgo_gc.dll.
+    // tier0 must come first (engine dependency); steam_api64 must be pre-loaded so that
+    // when csgo_gc's import table is resolved Wine binds the real Valve DLL rather than
+    // its own built-in stub (which has SteamAPI_Init unimplemented).
+    static const wchar_t *preloadDlls[] = { L"tier0.dll", L"steam_api64.dll" };
+    for (const wchar_t *dll : preloadDlls)
     {
-        ErrorMessageBox(L"Could not load '%ls':\n%ls", modulePath, LastErrorString());
-        return 1;
+        _snwprintf_s(modulePath, std::size(modulePath), L"%ls\\%ls", baseDir, dll);
+        if (!LoadLibraryExW(modulePath, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH))
+        {
+            ErrorMessageBox(L"Could not load '%ls':\n%ls", modulePath, LastErrorString());
+            return 1;
+        }
     }
 
     // csgo_gc.dll lives in game\csgo_gc\x64; go up two levels from game\bin\win64
