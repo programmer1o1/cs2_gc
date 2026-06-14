@@ -2397,18 +2397,26 @@ static void ShutdownSteamAPI(bool dedicated)
 
 static void InstallSteamClientHooks()
 {
-    uint8_t steamClientPath[4096]; // NOTE: text encoding stored depends on the platform (wchar_t on windows)
+#ifdef _WIN32
+    // On Windows, bypass Platform::SteamClientPath/Factory entirely.
+    // Use the already-loaded module handle directly — path-based LoadLibraryExW
+    // fails under CrossOver because Wine maps module paths differently.
+    HMODULE steamclientModule = GetModuleHandleW(L"steamclient64.dll");
+    if (!steamclientModule)
+        steamclientModule = GetModuleHandleW(L"steamclient.dll");
+    if (!steamclientModule)
+        Platform::Error("steamclient64.dll not loaded — cannot install GC hooks");
+    void *CreateInterface = GetProcAddress(steamclientModule, "CreateInterface");
+    if (!CreateInterface)
+        Platform::Error("Could not get steamclient CreateInterface");
+#else
+    uint8_t steamClientPath[4096];
     if (!Platform::SteamClientPath(steamClientPath, sizeof(steamClientPath)))
-    {
         Platform::Error("Could not get steamclient module path");
-    }
-
-    // load steamclient
     void *CreateInterface = Platform::SteamClientFactory(steamClientPath);
     if (!CreateInterface)
-    {
         Platform::Error("Could not get steamclient factory");
-    }
+#endif
 
     INLINE_HOOK(CreateInterface);
 
@@ -2445,6 +2453,44 @@ static bool Hk_SteamAPI_Init()
     return result;
 }
 
+#ifdef _WIN32
+// LdrRegisterDllNotification fires the instant a DLL is mapped into the process,
+// before its DllMain runs. We use it to hook steamclient64 the moment CS2 loads it
+// (which happens lazily during engine init, not at launcher startup).
+
+typedef struct {
+    ULONG Flags;
+    PCUNICODE_STRING FullDllName;
+    PCUNICODE_STRING BaseDllName;
+    PVOID DllBase;
+    ULONG SizeOfImage;
+} LDR_DLL_LOADED_NOTIFICATION_DATA;
+
+typedef union {
+    LDR_DLL_LOADED_NOTIFICATION_DATA Loaded;
+} LDR_DLL_NOTIFICATION_DATA_CSGO;
+
+typedef VOID (CALLBACK *PLDR_DLL_NOTIFICATION_FUNCTION)(ULONG, const LDR_DLL_NOTIFICATION_DATA_CSGO *, PVOID);
+typedef NTSTATUS (WINAPI *LdrRegisterDllNotification_t)(ULONG, PLDR_DLL_NOTIFICATION_FUNCTION, PVOID, PVOID *);
+
+#define LDR_DLL_NOTIFICATION_REASON_LOADED 1
+
+static void CALLBACK OnSteamClientLoaded(ULONG reason, const LDR_DLL_NOTIFICATION_DATA_CSGO *data, PVOID)
+{
+    if (reason != LDR_DLL_NOTIFICATION_REASON_LOADED)
+        return;
+    if (!data->Loaded.BaseDllName || !data->Loaded.BaseDllName->Buffer)
+        return;
+    if (_wcsicmp(data->Loaded.BaseDllName->Buffer, L"steamclient64.dll") == 0 ||
+        _wcsicmp(data->Loaded.BaseDllName->Buffer, L"steamclient.dll") == 0)
+    {
+        Platform::Print("csgo_gc: steamclient loaded (%ls), installing GC hooks\n",
+            data->Loaded.BaseDllName->Buffer);
+        InstallSteamClientHooks();
+    }
+}
+#endif
+
 void SteamHookPreInstall(bool dedicated)
 {
     s_deferredDedicated = dedicated;
@@ -2452,11 +2498,29 @@ void SteamHookPreInstall(bool dedicated)
     AppId::Init();
     Platform::SetEnvVar("SteamAppId", std::to_string(AppId::GetOverride()).c_str());
 
-    // CS2 (Source 2) does not call steam_api64's SteamAPI_Init — it initializes
-    // Steam directly through tier0/steamclient. Hook CreateInterface now, before
-    // Source2Main, so we intercept CS2's direct steamclient initialization.
-    // steamclient64.dll is already in memory; Steam bootstraps it before the game runs.
-    InstallSteamClientHooks();
+#ifdef _WIN32
+    // steamclient64.dll is loaded lazily by CS2's engine init, not at launcher startup.
+    // If it's already in memory (e.g. Steam bootstrapped early), hook it now.
+    // Otherwise register a DLL load notification so we hook it the moment it loads.
+    if (GetModuleHandleW(L"steamclient64.dll") || GetModuleHandleW(L"steamclient.dll"))
+    {
+        Platform::Print("csgo_gc: steamclient already loaded, installing hooks now\n");
+        InstallSteamClientHooks();
+        return;
+    }
+
+    auto LdrRegisterDllNotification = (LdrRegisterDllNotification_t)
+        GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "LdrRegisterDllNotification");
+    if (!LdrRegisterDllNotification)
+        Platform::Error("LdrRegisterDllNotification not found in ntdll.dll");
+
+    static void *s_dllNotifyCookie;
+    NTSTATUS status = LdrRegisterDllNotification(0, OnSteamClientLoaded, nullptr, &s_dllNotifyCookie);
+    if (status != 0)
+        Platform::Error("LdrRegisterDllNotification failed: 0x%08X", (unsigned)status);
+
+    Platform::Print("csgo_gc: registered steamclient load notification\n");
+#endif // _WIN32
 }
 
 void SteamHookInstall(bool dedicated)
