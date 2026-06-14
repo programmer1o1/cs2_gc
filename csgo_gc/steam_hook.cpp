@@ -1744,6 +1744,7 @@ public:
 
     void *GetInterface(const char *version, void *original)
     {
+        Platform::Print("csgo_gc: SteamInterfaceProxy::GetInterface(\"%s\")\n", version);
         if (InterfaceMatches(version, STEAMGAMECOORDINATOR_INTERFACE_VERSION))
         {
             // pass 0 as steamid for servers so the wrapper knows it's for a server
@@ -2070,10 +2071,12 @@ static void *(*Og_CreateInterface)(const char *, int *errorCode);
 
 static void *Hk_CreateInterface(const char *name, int *errorCode)
 {
+    Platform::Print("csgo_gc: Hk_CreateInterface(\"%s\")\n", name);
     void *result = Og_CreateInterface(name, errorCode);
 
     if (InterfaceMatches(name, STEAMCLIENT_INTERFACE_VERSION))
     {
+        Platform::Print("csgo_gc: intercepted ISteamClient, returning proxy\n");
         s_steamClientProxy.SetOriginal(static_cast<ISteamClient *>(result));
         return &s_steamClientProxy;
     }
@@ -2423,11 +2426,14 @@ static bool (*Og_SteamAPI_Init)();
 
 static bool Hk_SteamAPI_Init()
 {
+    Platform::Print("csgo_gc: Hk_SteamAPI_Init fired\n");
     // Hook CreateInterface BEFORE SteamAPI_Init runs: the real SteamAPI_Init creates
     // the ISteamGameCoordinator interface internally, so hooking after would be too late.
     // steamclient64.dll is already in memory because steam_api64.dll loads it on attach.
     InstallSteamClientHooks();
+    Platform::Print("csgo_gc: steamclient hooks installed, calling real SteamAPI_Init\n");
     bool result = Og_SteamAPI_Init();
+    Platform::Print("csgo_gc: SteamAPI_Init returned %d\n", (int)result);
     if (!result)
     {
         Platform::Error("Steam initialization failed. Please try the following steps:\n"
