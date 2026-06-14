@@ -2423,13 +2423,12 @@ static bool (*Og_SteamAPI_Init)();
 
 static bool Hk_SteamAPI_Init()
 {
+    // Hook CreateInterface BEFORE SteamAPI_Init runs: the real SteamAPI_Init creates
+    // the ISteamGameCoordinator interface internally, so hooking after would be too late.
+    // steamclient64.dll is already in memory because steam_api64.dll loads it on attach.
+    InstallSteamClientHooks();
     bool result = Og_SteamAPI_Init();
-    if (result)
-    {
-        // steamclient is now loaded; install hooks without disconnecting Steam
-        InstallSteamClientHooks();
-    }
-    else
+    if (!result)
     {
         Platform::Error("Steam initialization failed. Please try the following steps:\n"
                         "- Ensure that Steam is running.\n"
