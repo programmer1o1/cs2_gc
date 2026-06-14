@@ -135,7 +135,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         replacePath.reserve(2048);
 
         replacePath.append(baseDir);
-        replacePath.append(L"\\bin\\" GC_LIB_DIR "\\;");
+        replacePath.append(L"\\bin\\" GC_GAME_BIN_DIR "\\;");
 
         const wchar_t *currentPath = _wgetenv(L"PATH");
         if (currentPath)
@@ -146,7 +146,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         _wputenv_s(L"PATH", replacePath.c_str());
     }
 
-    _snwprintf_s(modulePath, std::size(modulePath), L"%ls\\bin\\" GC_LIB_DIR "\\" LAUNCHER_LIB GC_LIB_SUFFIX GC_LIB_EXTENSION, baseDir);
+    _snwprintf_s(modulePath, std::size(modulePath), L"%ls\\bin\\" GC_GAME_BIN_DIR "\\" LAUNCHER_LIB GC_LIB_SUFFIX GC_LIB_EXTENSION, baseDir);
     LauncherMain_t LauncherMain = (LauncherMain_t)LoadModuleAndFindSymbol(modulePath, SYMBOL_NAME);
     if (!LauncherMain)
     {

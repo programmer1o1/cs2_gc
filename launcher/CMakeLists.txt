@@ -26,6 +26,7 @@ function(launcher_target NAME DEDICATED)
     
     target_compile_definitions(${NAME} PRIVATE
         GC_LIB_DIR="${GC_LIB_DIR}"
+        GC_GAME_BIN_DIR="${GC_LIB_DIR}"
         GC_LIB_SUFFIX="${GC_LIB_SUFFIX}"
         GC_LIB_EXTENSION="${CMAKE_SHARED_LIBRARY_SUFFIX}")
     
@@ -39,6 +40,10 @@ endfunction()
 
 launcher_target(csgo OFF)
 launcher_target(cs2 OFF)
+if (WIN32 AND NOT IS_32BIT)
+    # CS2 on Windows puts launcher.dll in bin/win64/, not bin/x64/
+    target_compile_definitions(cs2 PRIVATE GC_GAME_BIN_DIR="win64")
+endif()
 
 if (WIN32 OR (IS_32BIT AND NOT APPLE))
     launcher_target(srcds ON)
