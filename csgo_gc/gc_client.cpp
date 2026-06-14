@@ -508,6 +508,12 @@ void ClientGC::OnClientHello(GCMessageRead &messageRead)
 
     // send all ranks here as well, it's a bit back and forth with real gc
     SendRankUpdate();
+
+    // CS2 waits for an explicit connection-status message before clearing "Connecting to
+    // CS2 Network." — CMsgClientWelcome alone is not enough.
+    CMsgConnectionStatus connStatus;
+    connStatus.set_status(GCConnectionStatus_HAVE_SESSION);
+    SendMessageToGame(false, k_EMsgGCClientConnectionStatus, connStatus);
 }
 
 void ClientGC::AdjustItemEquippedState(GCMessageRead &messageRead)
