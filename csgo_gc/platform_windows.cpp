@@ -76,10 +76,18 @@ bool SteamClientPath(void *buffer, size_t bufferSize)
 
 void *SteamClientFactory(const void *pathBuffer)
 {
-    HMODULE steamclient = LoadLibraryExW(
-        reinterpret_cast<const wchar_t *>(pathBuffer),
-        nullptr,
-        LOAD_WITH_ALTERED_SEARCH_PATH);
+    // Prefer the already-loaded handle — LoadLibraryExW by path fails under CrossOver
+    // because Wine maps the module path differently than the filesystem path expects.
+    HMODULE steamclient = GetModuleHandleW(L"steamclient64.dll");
+    if (!steamclient)
+        steamclient = GetModuleHandleW(L"steamclient.dll");
+    if (!steamclient)
+    {
+        steamclient = LoadLibraryExW(
+            reinterpret_cast<const wchar_t *>(pathBuffer),
+            nullptr,
+            LOAD_WITH_ALTERED_SEARCH_PATH);
+    }
 
     if (!steamclient)
     {
