@@ -2068,6 +2068,8 @@ static SteamClientProxy s_steamClientProxy;
 
 static void *(*Og_CreateInterface)(const char *, int *errorCode);
 
+static void HookCreate(const char *name, void *target, void *hook, void **bridge);
+
 // Hook for GetISteamGenericInterface on SteamClient versions newer than 020.
 // We cannot proxy those objects directly (our proxy is ISteamClient020-based and crashes
 // when CS2 calls methods added in later versions). Instead we hook the function itself.
