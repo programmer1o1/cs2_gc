@@ -603,6 +603,9 @@ bool Inventory::UnlockCrate(uint64_t crateId,
         }
     }
 
+    // Persist immediately so the new item survives even if CS2 closes or crashes
+    WriteToFile();
+
     return true;
 }
 
