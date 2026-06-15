@@ -850,7 +850,7 @@ static void QueueUserStatsCallback()
     s_userStatsReceivedCallbacks.push_back(callback);
 }
 
-class SteamUserStatsProxy : public ISteamUserStats
+class SteamUserStatsProxy final : public ISteamUserStats
 {
     ISteamUserStats *const m_original;
 
@@ -1394,7 +1394,7 @@ public:
     }
 };
 
-class SteamUserProxy : public ISteamUser
+class SteamUserProxy final : public ISteamUser
 {
     ISteamUser *m_original;
 
@@ -1576,7 +1576,7 @@ public:
     }
 };
 
-class SteamMatchmakingServersProxy : public ISteamMatchmakingServers
+class SteamMatchmakingServersProxy final : public ISteamMatchmakingServers
 {
     ISteamMatchmakingServers *m_original;
 
@@ -2216,7 +2216,7 @@ static void *Hk_SteamInternal_FindOrCreateUserInterface(HSteamUser hSteamUser, c
         if (!s_cs2GCProxy)
         {
             uint64_t steamId = SteamUser() ? SteamUser()->GetSteamID().ConvertToUint64() : 0;
-            Platform::Print("csgo_gc: intercepted GC via FindOrCreateUserInterface, steamId=%llu\n", steamId);
+            Platform::Print("csgo_gc: intercepted GC via FindOrCreateUserInterface, steamId=%llu\n", (unsigned long long)steamId);
             s_cs2GCProxy = new SteamGameCoordinatorProxy(steamId);
         }
         return s_cs2GCProxy;
@@ -2421,7 +2421,7 @@ static void ShutdownSteamAPI(bool dedicated)
     }
 }
 
-static void InstallSteamClientHooks(HMODULE preloadedModule = nullptr)
+static void InstallSteamClientHooks(void *preloadedModule = nullptr)
 {
 #ifdef _WIN32
     // On Windows, bypass Platform::SteamClientPath/Factory entirely.
@@ -2429,7 +2429,7 @@ static void InstallSteamClientHooks(HMODULE preloadedModule = nullptr)
     // fails under CrossOver because Wine maps module paths differently.
     // preloadedModule is set when called from LdrRegisterDllNotification, where
     // GetModuleHandleW returns NULL because the DLL isn't in the module list yet.
-    HMODULE steamclientModule = preloadedModule;
+    HMODULE steamclientModule = static_cast<HMODULE>(preloadedModule);
     if (!steamclientModule)
         steamclientModule = GetModuleHandleW(L"steamclient64.dll");
     if (!steamclientModule)
