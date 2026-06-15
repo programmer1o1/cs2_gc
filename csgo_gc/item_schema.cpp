@@ -145,10 +145,12 @@ ItemSchema::ItemSchema()
     for (auto [id, type] : k_knownAttributes)
         m_attributeInfo.emplace(id, type);
 
+    // Try the canonical path (relative to game/bin/win64/) first, then one level up.
     KeyValue itemSchema{ "root" };
-    if (!itemSchema.ParseFromFile("csgo/scripts/items/items_game.txt"))
+    if (!itemSchema.ParseFromFile("csgo/scripts/items/items_game.txt") &&
+        !itemSchema.ParseFromFile("../../csgo/scripts/items/items_game.txt"))
     {
-        Platform::Print("csgo_gc: items_game.txt not found, using hardcoded attribute types\n");
+        Platform::Print("csgo_gc: items_game.txt not found, using hardcoded attribute types only\n");
         return;
     }
 
@@ -788,6 +790,54 @@ void ItemSchema::ParseItemRecursive(ItemInfo &info, const KeyValue &itemKey, con
             info.m_supplyCrateSeries = supplyCrateSeries->GetNumber<uint32_t>("value");
         }
     }
+
+    // loadout slot (flexible_loadout_slot → slot number via player_loadout_slots table)
+    std::string_view loadoutSlot = itemKey.GetString("flexible_loadout_slot");
+    if (loadoutSlot.size())
+    {
+        static const std::pair<std::string_view, int32_t> k_slotMap[] = {
+            { "melee", 0 }, { "c4", 1 },
+            { "secondary0", 2 }, { "secondary1", 3 }, { "secondary2", 4 },
+            { "secondary3", 5 }, { "secondary4", 6 }, { "secondary5", 7 },
+            { "smg0", 8 }, { "smg1", 9 }, { "smg2", 10 }, { "smg3", 11 },
+            { "smg4", 12 }, { "smg5", 13 },
+            { "rifle0", 14 }, { "rifle1", 15 }, { "rifle2", 16 },
+            { "rifle3", 17 }, { "rifle4", 18 }, { "rifle5", 19 },
+            { "heavy0", 20 }, { "heavy1", 21 }, { "heavy2", 22 },
+            { "heavy3", 23 }, { "heavy4", 24 }, { "heavy5", 25 },
+            { "grenade0", 26 }, { "grenade1", 27 }, { "grenade2", 28 },
+            { "grenade3", 29 }, { "grenade4", 30 }, { "grenade5", 31 },
+            { "equipment0", 32 }, { "equipment1", 33 }, { "equipment2", 34 },
+            { "equipment3", 35 }, { "equipment4", 36 }, { "equipment5", 37 },
+            { "musickit", 54 }, { "flair0", 55 },
+        };
+        for (const auto &entry : k_slotMap)
+        {
+            if (loadoutSlot == entry.first)
+            {
+                info.m_loadoutSlot = entry.second;
+                break;
+            }
+        }
+    }
+
+    // used_by_classes: determines which GC class IDs to equip for
+    // class IDs: 2 = CT, 3 = T; UINT32_MAX means "both" (not explicitly set)
+    const KeyValue *classesKey = itemKey.GetSubkey("used_by_classes");
+    if (classesKey)
+    {
+        uint32_t classes = 0;
+        for (const KeyValue &classKey : *classesKey)
+        {
+            if (classKey.Name() == "counter-terrorists")
+                classes |= (1u << 2);
+            else if (classKey.Name() == "terrorists")
+                classes |= (1u << 3);
+            else if (classKey.Name() == "noteam")
+                classes |= (1u << 2) | (1u << 3);
+        }
+        info.m_usedByClasses = classes;
+    }
 }
 
 void ItemSchema::ParseAttributes(const KeyValue *attributesKey)
@@ -1317,4 +1367,17 @@ uint32_t ItemSchema::GetPaintedRarity(uint32_t defIndex, uint32_t paintKitDefInd
     }
 
     return PaintedItemRarity(itemInfo->m_rarity, paintKitInfo->m_rarity);
+}
+
+bool ItemSchema::GetItemLoadoutInfo(uint32_t defIndex, uint32_t &slot, uint32_t &classes) const
+{
+    const ItemInfo *info = ItemInfoByDefIndex(defIndex);
+    if (!info || info->m_loadoutSlot < 0)
+        return false;
+
+    slot = static_cast<uint32_t>(info->m_loadoutSlot);
+    classes = (info->m_usedByClasses == UINT32_MAX)
+        ? ((1u << 2) | (1u << 3))  // both CT and T
+        : info->m_usedByClasses;
+    return true;
 }

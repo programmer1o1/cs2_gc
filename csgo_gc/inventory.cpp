@@ -6,6 +6,7 @@
 #include "keyvalue.h"
 #include "platform.h"
 #include "random.h"
+#include <set>
 
 constexpr const char *InventoryFilePath = "csgo_gc/inventory.txt";
 
@@ -210,6 +211,51 @@ void Inventory::ReadFromFile()
             defaultEquip.set_item_definition(FromString<uint32_t>(defaultEquipKey.Name()));
             defaultEquip.set_class_id(defaultEquipKey.GetNumber<uint32_t>("class_id"));
             defaultEquip.set_slot_id(defaultEquipKey.GetNumber<uint32_t>("slot_id"));
+        }
+    }
+
+    // Auto-equip items that have a paint kit but no equipped_state.
+    // Tracks which (class, slot) pairs are already taken to avoid double-equipping.
+    std::set<std::pair<uint32_t, uint32_t>> takenSlots;
+    for (auto &pair : m_items)
+    {
+        for (const CSOEconItemEquipped &eq : pair.second.equipped_state())
+            takenSlots.emplace(eq.new_class(), eq.new_slot());
+    }
+
+    for (auto &pair : m_items)
+    {
+        CSOEconItem &item = pair.second;
+        if (item.equipped_state_size() > 0)
+            continue;
+
+        // Only auto-equip items with a paint kit attribute (skins)
+        bool hasPaintKit = false;
+        for (const CSOEconItemAttribute &attr : item.attribute())
+        {
+            if (attr.def_index() == ItemSchema::AttributeTexturePrefab)
+            {
+                hasPaintKit = true;
+                break;
+            }
+        }
+        if (!hasPaintKit)
+            continue;
+
+        uint32_t slot = 0, classes = 0;
+        if (!m_itemSchema.GetItemLoadoutInfo(item.def_index(), slot, classes))
+            continue;
+
+        for (uint32_t classId = 2; classId <= 3; classId++)
+        {
+            if (!(classes & (1u << classId)))
+                continue;
+            if (takenSlots.count({ classId, slot }))
+                continue;
+            CSOEconItemEquipped *eq = item.add_equipped_state();
+            eq->set_new_class(classId);
+            eq->set_new_slot(slot);
+            takenSlots.emplace(classId, slot);
         }
     }
 }

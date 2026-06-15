@@ -37,6 +37,11 @@ public:
     bool m_isCoupon;
     std::string m_lootListName;
     bool m_willProduceStatTrak;
+
+    // loadout info for auto-equipping; -1 = no loadout slot
+    int32_t m_loadoutSlot = -1;
+    // bitmask of GC class IDs (bit 2 = CT, bit 3 = T); UINT32_MAX = both teams (not set)
+    uint32_t m_usedByClasses = UINT32_MAX;
 };
 
 class PaintKitInfo
@@ -153,6 +158,9 @@ public:
     bool GetTradeUpCandidates(std::string_view collectionName, uint32_t outputRarity,
         std::vector<const LootListItem *> &outCandidates) const;
     uint32_t GetPaintedRarity(uint32_t defIndex, uint32_t paintKitDefIndex, uint32_t fallbackRarity) const;
+    // Returns false if defIndex has no loadout slot. slot is the GC slot number,
+    // classes is a bitmask of GC class IDs (bit 2 = CT, bit 3 = T).
+    bool GetItemLoadoutInfo(uint32_t defIndex, uint32_t &slot, uint32_t &classes) const;
 
 
 public:
