@@ -1827,7 +1827,6 @@ class SteamClientProxy : public ISteamClient
 public:
     void SetOriginal(ISteamClient *original)
     {
-        assert(!m_original || m_original == original);
         m_original = original;
     }
 
@@ -2074,9 +2073,12 @@ static void *Hk_CreateInterface(const char *name, int *errorCode)
     Platform::Print("csgo_gc: Hk_CreateInterface(\"%s\")\n", name);
     void *result = Og_CreateInterface(name, errorCode);
 
-    if (InterfaceMatches(name, STEAMCLIENT_INTERFACE_VERSION))
+    // Intercept any ISteamClient version. CS:GO uses SteamClient020, CS2 uses SteamClient023.
+    // We must proxy all versions so that GetISteamGenericInterface("SteamGameCoordinator001")
+    // goes through our proxy regardless of which client version the engine holds.
+    if (strncmp(name, "SteamClient0", 12) == 0 && result)
     {
-        Platform::Print("csgo_gc: intercepted ISteamClient, returning proxy\n");
+        Platform::Print("csgo_gc: intercepted ISteamClient (%s), returning proxy\n", name);
         s_steamClientProxy.SetOriginal(static_cast<ISteamClient *>(result));
         return &s_steamClientProxy;
     }
@@ -2209,6 +2211,7 @@ static SteamGameCoordinatorProxy *s_cs2GCProxy;
 
 static void *Hk_SteamInternal_FindOrCreateUserInterface(HSteamUser hSteamUser, const char *pszVersion)
 {
+    Platform::Print("csgo_gc: Hk_SteamInternal_FindOrCreateUserInterface(\"%s\")\n", pszVersion);
     void *result = Og_SteamInternal_FindOrCreateUserInterface(hSteamUser, pszVersion);
 
     if (strcmp(pszVersion, STEAMGAMECOORDINATOR_INTERFACE_VERSION) == 0)
