@@ -2073,14 +2073,19 @@ static void *Hk_CreateInterface(const char *name, int *errorCode)
     Platform::Print("csgo_gc: Hk_CreateInterface(\"%s\")\n", name);
     void *result = Og_CreateInterface(name, errorCode);
 
-    // Intercept any ISteamClient version. CS:GO uses SteamClient020, CS2 uses SteamClient023.
-    // We must proxy all versions so that GetISteamGenericInterface("SteamGameCoordinator001")
-    // goes through our proxy regardless of which client version the engine holds.
+    // Intercept any ISteamClient version >= 020. We implement ISteamClient020's vtable, so
+    // older versions (e.g. SteamClient017) have fewer/differently-ordered slots and must not
+    // be proxied — calling back through m_original with their pointer crashes.
+    // CS:GO uses SteamClient020, CS2 uses SteamClient023; both are >= 020.
     if (strncmp(name, "SteamClient0", 12) == 0 && result)
     {
-        Platform::Print("csgo_gc: intercepted ISteamClient (%s), returning proxy\n", name);
-        s_steamClientProxy.SetOriginal(static_cast<ISteamClient *>(result));
-        return &s_steamClientProxy;
+        int ver = atoi(name + 11); // "SteamClient020" -> atoi("020") = 20
+        if (ver >= 20)
+        {
+            Platform::Print("csgo_gc: intercepted ISteamClient (%s), returning proxy\n", name);
+            s_steamClientProxy.SetOriginal(static_cast<ISteamClient *>(result));
+            return &s_steamClientProxy;
+        }
     }
 
     return result;
