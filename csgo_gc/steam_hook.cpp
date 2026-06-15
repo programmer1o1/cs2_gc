@@ -2068,25 +2068,65 @@ static SteamClientProxy s_steamClientProxy;
 
 static void *(*Og_CreateInterface)(const char *, int *errorCode);
 
+// Hook for GetISteamGenericInterface on SteamClient versions newer than 020.
+// We cannot proxy those objects directly (our proxy is ISteamClient020-based and crashes
+// when CS2 calls methods added in later versions). Instead we hook the function itself.
+#ifdef _WIN32
+static bool s_gcIfaceHookInstalled = false;
+static void *(*Og_GetISteamGenericInterface_direct)(void *, HSteamUser, HSteamPipe, const char *);
+
+static void *Hk_GetISteamGenericInterface_direct(void *thisptr, HSteamUser hSteamUser, HSteamPipe hSteamPipe, const char *pchVersion)
+{
+    Platform::Print("csgo_gc: Hk_GetISteamGenericInterface(\"%s\")\n", pchVersion);
+    void *result = Og_GetISteamGenericInterface_direct(thisptr, hSteamUser, hSteamPipe, pchVersion);
+    if (strcmp(pchVersion, STEAMGAMECOORDINATOR_INTERFACE_VERSION) == 0)
+    {
+        if (!s_cs2GCProxy)
+        {
+            uint64_t steamId = SteamUser() ? SteamUser()->GetSteamID().ConvertToUint64() : 0;
+            Platform::Print("csgo_gc: intercepted GC via GetISteamGenericInterface, steamId=%llu\n", (unsigned long long)steamId);
+            s_cs2GCProxy = new SteamGameCoordinatorProxy(steamId);
+        }
+        return s_cs2GCProxy;
+    }
+    return result;
+}
+#endif
+
 static void *Hk_CreateInterface(const char *name, int *errorCode)
 {
     Platform::Print("csgo_gc: Hk_CreateInterface(\"%s\")\n", name);
     void *result = Og_CreateInterface(name, errorCode);
 
-    // Intercept any ISteamClient version >= 020. We implement ISteamClient020's vtable, so
-    // older versions (e.g. SteamClient017) have fewer/differently-ordered slots and must not
-    // be proxied — calling back through m_original with their pointer crashes.
-    // CS:GO uses SteamClient020, CS2 uses SteamClient023; both are >= 020.
-    if (strncmp(name, "SteamClient0", 12) == 0 && result)
+    // Proxy exactly SteamClient020 — our proxy is based on that interface definition.
+    // Proxying newer versions (e.g. SteamClient023) crashes when CS2 calls methods added
+    // after SteamClient020 that our proxy does not implement.
+    if (InterfaceMatches(name, STEAMCLIENT_INTERFACE_VERSION))
     {
-        int ver = atoi(name + 11); // "SteamClient020" -> atoi("020") = 20
-        if (ver >= 20)
+        Platform::Print("csgo_gc: intercepted ISteamClient, returning proxy\n");
+        s_steamClientProxy.SetOriginal(static_cast<ISteamClient *>(result));
+        return &s_steamClientProxy;
+    }
+
+#ifdef _WIN32
+    // CS2 calls GetISteamGenericInterface("SteamGameCoordinator001") on SteamClient023.
+    // Hook slot 12 (GetISteamGenericInterface) directly from the vtable the first time
+    // we see a newer SteamClient, then return the real object so CS2 can call all its methods.
+    if (!s_gcIfaceHookInstalled && strncmp(name, "SteamClient0", 12) == 0 && result)
+    {
+        int ver = atoi(name + 11);
+        if (ver > 20)
         {
-            Platform::Print("csgo_gc: intercepted ISteamClient (%s), returning proxy\n", name);
-            s_steamClientProxy.SetOriginal(static_cast<ISteamClient *>(result));
-            return &s_steamClientProxy;
+            void **vtable = *reinterpret_cast<void ***>(result);
+            void *fn = vtable[12]; // GetISteamGenericInterface is slot 12 in ISteamClient020+
+            Platform::Print("csgo_gc: hooking GetISteamGenericInterface from %s vtable slot 12\n", name);
+            HookCreate("GetISteamGenericInterface_direct", fn,
+                reinterpret_cast<void *>(Hk_GetISteamGenericInterface_direct),
+                reinterpret_cast<void **>(&Og_GetISteamGenericInterface_direct));
+            s_gcIfaceHookInstalled = true;
         }
     }
+#endif
 
     return result;
 }
@@ -2216,7 +2256,6 @@ static SteamGameCoordinatorProxy *s_cs2GCProxy;
 
 static void *Hk_SteamInternal_FindOrCreateUserInterface(HSteamUser hSteamUser, const char *pszVersion)
 {
-    Platform::Print("csgo_gc: Hk_SteamInternal_FindOrCreateUserInterface(\"%s\")\n", pszVersion);
     void *result = Og_SteamInternal_FindOrCreateUserInterface(hSteamUser, pszVersion);
 
     if (strcmp(pszVersion, STEAMGAMECOORDINATOR_INTERFACE_VERSION) == 0)
