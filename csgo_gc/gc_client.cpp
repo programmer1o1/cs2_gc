@@ -896,7 +896,12 @@ void ClientGC::UnlockCrate(GCMessageRead &messageRead)
             newItem,
             notification))
     {
-        // mikkotodo what does the server want to know
+        // CS2 expects k_EMsgGCUnlockCrateResponse (result=0) first.
+        // Without it the handler never runs and shows "Unable to retrieve".
+        CMsgGCUnlockCrateResponse crateResponse;
+        crateResponse.set_result_code(0);
+        SendMessageToGame(false, k_EMsgGCUnlockCrateResponse, crateResponse);
+
         SendMessageToGame(true, k_ESOMsg_Destroy, destroyCrate);
         SendMessageToGame(true, k_ESOMsg_Destroy, destroyKey);
         SendMessageToGame(true, k_ESOMsg_Create, newItem);

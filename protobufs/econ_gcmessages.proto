@@ -25,6 +25,10 @@ message CMsgGCItemCustomizationNotification {
     optional uint32 request = 2;
 }
 
+message CMsgGCUnlockCrateResponse {
+    optional uint32 result_code = 1;
+}
+
 enum EGCItemMsg {
     k_EMsgGCBase = 1000;
     k_EMsgGCSetItemPosition = 1001;

@@ -78,7 +78,7 @@ enum SOTypeId : uint32_t
 enum ItemOrigin
 {
     ItemOriginPurchased = 2,
-    ItemOriginCrate = 8,
+    ItemOriginCrate = 5, // k_EItemOrigin_UnlockedCrate — CS2 searches origin==5 to find the new item
     ItemOriginBaseItem = 22
 };
 
