@@ -183,6 +183,11 @@ private:
         AddToMultipleObjects(message, SOTypeDefaultEquippedDefinitionInstanceClient, object);
     }
 
+    void AddToMultipleObjects(CMsgSOMultipleObjects &message, const CSOEconEquipSlot &object)
+    {
+        AddToMultipleObjects(message, SOTypeEquipSlot, object);
+    }
+
     void ToSingleObject(CMsgSOSingleObject &message, const CSOEconDefaultEquippedDefinitionInstanceClient &object)
     {
         ToSingleObject(message, SOTypeDefaultEquippedDefinitionInstanceClient, object);

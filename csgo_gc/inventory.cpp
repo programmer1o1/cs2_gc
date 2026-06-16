@@ -386,8 +386,11 @@ void Inventory::BuildCacheSubscription(CMsgSOCacheSubscribed &message, int level
     message.mutable_owner_soid()->set_id(m_steamId);
 
     {
-        CMsgSOCacheSubscribed_SubscribedType *object = message.add_objects();
-        object->set_type_id(SOTypeItem);
+        CMsgSOCacheSubscribed_SubscribedType *itemObject = message.add_objects();
+        itemObject->set_type_id(SOTypeItem);
+
+        CMsgSOCacheSubscribed_SubscribedType *equipObject = message.add_objects();
+        equipObject->set_type_id(SOTypeEquipSlot);
 
         for (const auto &pair : m_items)
         {
@@ -396,7 +399,22 @@ void Inventory::BuildCacheSubscription(CMsgSOCacheSubscribed &message, int level
                 continue;
             }
 
-            object->add_object_data(pair.second.SerializeAsString());
+            itemObject->add_object_data(pair.second.SerializeAsString());
+
+            // Send a CSOEconEquipSlot for each equipped slot so the game server's
+            // CCSInventoryManager knows which item is in which loadout slot.
+            // Without these, the server can't look up items by (class, slot) and
+            // no skins are applied when weapons are given.
+            for (const CSOEconItemEquipped &eq : pair.second.equipped_state())
+            {
+                CSOEconEquipSlot equipSlot;
+                equipSlot.set_account_id(AccountId());
+                equipSlot.set_class_id(eq.new_class());
+                equipSlot.set_slot_id(eq.new_slot());
+                equipSlot.set_item_id(pair.second.id());
+                equipSlot.set_item_definition(pair.second.def_index());
+                equipObject->add_object_data(equipSlot.SerializeAsString());
+            }
         }
     }
 
@@ -500,6 +518,16 @@ bool Inventory::EquipItem(uint64_t itemId, uint32_t classId, uint32_t slotId, CM
         equippedState->set_new_slot(slotId);
 
         AddToMultipleObjects(update, item);
+
+        // Also send a CSOEconEquipSlot so the game server's CCSInventoryManager
+        // gets updated when the player changes loadout.
+        CSOEconEquipSlot equipSlot;
+        equipSlot.set_account_id(AccountId());
+        equipSlot.set_class_id(classId);
+        equipSlot.set_slot_id(slotId);
+        equipSlot.set_item_id(item.id());
+        equipSlot.set_item_definition(item.def_index());
+        AddToMultipleObjects(update, equipSlot);
 
         return true;
     }
