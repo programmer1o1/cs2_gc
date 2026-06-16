@@ -183,6 +183,7 @@ void Inventory::ReadFromFile()
     KeyValue inventoryKey{ "inventory" };
     if (!inventoryKey.ParseFromFile(InventoryFilePath))
     {
+        Platform::Print("Inventory: failed to open %s\n", InventoryFilePath);
         return;
     }
 
@@ -258,6 +259,8 @@ void Inventory::ReadFromFile()
             takenSlots.emplace(classId, slot);
         }
     }
+
+    Platform::Print("Inventory: loaded %zu items from %s\n", m_items.size(), InventoryFilePath);
 }
 
 void Inventory::ReadItem(const KeyValue &itemKey, CSOEconItem &item) const
