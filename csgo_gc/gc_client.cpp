@@ -896,11 +896,13 @@ void ClientGC::UnlockCrate(GCMessageRead &messageRead)
             newItem,
             notification))
     {
-        // CS2 expects k_EMsgGCUnlockCrateResponse (result=0) first.
-        // Without it the handler never runs and shows "Unable to retrieve".
-        CMsgGCUnlockCrateResponse crateResponse;
-        crateResponse.set_result_code(0);
-        SendMessageToGame(false, k_EMsgGCUnlockCrateResponse, crateResponse);
+        // CS2 expects k_EMsgGCUnlockCrateResponse (type 1008) first.
+        // Empty body: all proto fields default to 0, so result_code=0 (success).
+        // Without this CS2's handler never fires and shows "Unable to retrieve".
+        {
+            CMsgGCItemCustomizationNotification emptyResponse;
+            SendMessageToGame(false, k_EMsgGCUnlockCrateResponse, emptyResponse);
+        }
 
         SendMessageToGame(true, k_ESOMsg_Destroy, destroyCrate);
         SendMessageToGame(true, k_ESOMsg_Destroy, destroyKey);
