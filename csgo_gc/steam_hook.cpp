@@ -2128,6 +2128,8 @@ static EGCResults Hk_GC_RetrieveMessage(void *thisptr, uint32 *punMsgType, void 
     return Og_GC_RetrieveMessage(thisptr, punMsgType, pubDest, cubDest, pcubMsgSize);
 }
 
+static void AfterSteamInit(); // forward declaration — defined near Hk_SteamAPI_InitFlat
+
 static void HookGCVtable(void *realGC)
 {
     if (s_gcMethodsHooked || !realGC)
