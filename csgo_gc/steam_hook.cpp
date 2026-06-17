@@ -2977,16 +2977,18 @@ static void AfterSteamInit()
         }
     }
 
-    // Create our local ClientGC if not already created by another code path.
-    if (!s_clientGC)
+    // Create s_cs2GCProxy (which creates s_clientGC via SteamGameCoordinatorProxy ctor).
+    // When the game later calls GetISteamGenericInterface("SteamGameCoordinator001"),
+    // our hook returns this existing proxy — no double-creation of ClientGC.
+    if (!s_cs2GCProxy)
     {
         s_clientHSteamUser = hUser;
-        s_clientGC = new GCWrapper<ClientGC, NetworkingClient>{ SteamNetworkingMessages(), steamId };
-        Platform::Print("csgo_gc: ClientGC created, steamId=%llu\n", (unsigned long long)steamId);
+        s_cs2GCProxy = new SteamGameCoordinatorProxy(steamId);
+        Platform::Print("csgo_gc: created s_cs2GCProxy + ClientGC, steamId=%llu\n", (unsigned long long)steamId);
     }
     else
     {
-        Platform::Print("csgo_gc: ClientGC already exists, skipping creation\n");
+        Platform::Print("csgo_gc: s_cs2GCProxy already exists\n");
     }
 }
 
