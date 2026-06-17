@@ -280,6 +280,15 @@ public:
             s_clientGC->m_gc.PostToGC(GCEvent::SyncLocalPlayerMusicKitState,
                 0, &userId, sizeof(userId));
 
+            // Resend SO cache to game server on every round start.
+            // OnLoadoutChanged requires the player's CCSPlayerInventory to exist;
+            // sending during k_EMsgGCServerHello (map load) is too early.
+            // By round_start the player is fully connected and the inventory
+            // object is set up, so the SO cache will correctly populate
+            // CCSInventoryManager and set m_nFallbackPaintKit on weapons.
+            Platform::Print("Listener: round_start, resending SO cache to game server\n");
+            s_clientGC->m_gc.PostToGC(GCEvent::SOCacheRequest, 0, nullptr, 0);
+
             // hot-reload inventory if inventory.txt was modified since last check
             static int64_t s_lastInventoryMtime = Platform::FileModificationTime("../../csgo_gc/inventory.txt");
             int64_t currentMtime = Platform::FileModificationTime("../../csgo_gc/inventory.txt");
