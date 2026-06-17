@@ -2225,6 +2225,8 @@ struct SteamRawCallbackMsg { int hUser; int id; uint8_t *data; int size; };
 static bool (*Og_Steam_BGetCallback)(HSteamPipe, SteamRawCallbackMsg *, bool *);
 
 static void (*Og_Steam_FreeLastCallback)(HSteamPipe);
+static GCMessageAvailable_t s_bgetInjectedMsg{};
+static bool s_bgetLastWasInjected = false;
 
 static void Hk_Steam_FreeLastCallback(HSteamPipe hPipe)
 {
@@ -2235,9 +2237,6 @@ static void Hk_Steam_FreeLastCallback(HSteamPipe hPipe)
     }
     Og_Steam_FreeLastCallback(hPipe);
 }
-
-static GCMessageAvailable_t s_bgetInjectedMsg{};
-static bool s_bgetLastWasInjected = false;
 
 static bool Hk_Steam_BGetCallback(HSteamPipe hPipe, SteamRawCallbackMsg *pMsg, bool *pbServer)
 {
