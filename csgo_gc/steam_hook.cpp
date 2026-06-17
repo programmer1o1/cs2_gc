@@ -2225,50 +2225,71 @@ static bool s_fetchingRealGC = false;
 // matches known ISteamGameCoordinator layouts and patch it.
 static void *(*Og_SteamInternal_ContextInit)(void *);
 
+// Vtable addresses of GC objects discovered via ContextInit (for routing in hooks).
+static uintptr_t s_gcClientVtableSlot0 = 0; // SendMessage of the client GC class
+
 static void *Hk_SteamInternal_ContextInit(void *pContextData)
 {
     void *result = Og_SteamInternal_ContextInit(pContextData);
-    if (!result || s_gcMethodsHooked)
+    if (!result)
         return result;
 
-    // result = pointer to context data (array of interface pointers, 8 bytes each on x64)
-    // Scan the first 64 pointers for any that look like ISteamGameCoordinator objects.
     uintptr_t *ctx = reinterpret_cast<uintptr_t *>(result);
-    Platform::Print("csgo_gc: SteamInternal_ContextInit ctx=%p\n", result);
     for (int i = 0; i < 64; i++)
     {
         uintptr_t ptr = ctx[i];
         if (!ptr || (ptr & 7))
             continue;
-        // Check if the vtable slot 0 address looks like it's in steamclient64
         uintptr_t *vtable = nullptr;
         __try { vtable = *reinterpret_cast<uintptr_t **>(ptr); } __except(1) { continue; }
         if (!vtable)
             continue;
-        uintptr_t fn0 = 0, fn1 = 0;
-        __try { fn0 = vtable[0]; fn1 = vtable[1]; } __except(1) { continue; }
-        // Check if vtable matches the known GC vtable we already found
-        if (Og_GC_SendMessage && fn0 == reinterpret_cast<uintptr_t>(Og_GC_SendMessage))
+        uintptr_t fn0 = 0, fn1 = 0, fn2 = 0;
+        __try { fn0 = vtable[0]; fn1 = vtable[1]; fn2 = vtable[2]; } __except(1) { continue; }
+        if (!fn0 || !fn1 || !fn2 || fn0 == fn1 || fn1 == fn2)
+            continue;
+
+        // Check if vtable is in steamclient64.dll
+        HMODULE mod = nullptr;
+        if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                reinterpret_cast<LPCSTR>(fn0), &mod))
+            continue;
+        char name[64] = {};
+        GetModuleFileNameA(mod, name, sizeof(name));
+        if (!strstr(name, "steamclient"))
+            continue;
+
+        // Already patched this vtable?
+        if (fn0 == reinterpret_cast<uintptr_t>(Hk_GC_SendMessage))
         {
-            Platform::Print("csgo_gc: ContextInit: found GC ptr at ctx[%d]=%p (same vtable)\n", i, (void*)ptr);
+            // Already patched — route client GC objects using this vtable
+            if (!s_gcClientVtableSlot0)
+                s_gcClientVtableSlot0 = reinterpret_cast<uintptr_t>(Og_GC_SendMessage);
+            continue;
         }
-        else if (fn0 && fn1 && fn0 != fn1)
+
+        Platform::Print("csgo_gc: ContextInit ctx[%d]=%p vtable=[%p,%p,%p] (%s)\n",
+            i, (void*)ptr, (void*)fn0, (void*)fn1, (void*)fn2, name);
+
+        // Patch this vtable and update our originals.
+        // First vtable we patch = client GC (appears solo in small contexts).
+        if (!s_gcMethodsHooked)
         {
-            // Log anything that might be a GC object for analysis
-            // (small vtable with 3 entries near each other is a hint)
-            uintptr_t fn2 = 0;
-            __try { fn2 = vtable[2]; } __except(1) {}
-            if (fn2 && fn0 != fn2 && fn1 != fn2)
+            // Save originals from this vtable
+            Og_GC_SendMessage        = reinterpret_cast<EGCResults (*)(void *, uint32, const void *, uint32)>(fn0);
+            Og_GC_IsMessageAvailable = reinterpret_cast<bool (*)(void *, uint32 *)>(fn1);
+            Og_GC_RetrieveMessage    = reinterpret_cast<EGCResults (*)(void *, uint32 *, void *, uint32, uint32 *)>(fn2);
+            s_gcClientVtableSlot0    = fn0;
+
+            DWORD oldProtect;
+            if (VirtualProtect(vtable, 3 * sizeof(void *), PAGE_READWRITE, &oldProtect))
             {
-                HMODULE mod = nullptr;
-                GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                    reinterpret_cast<LPCSTR>(fn0), &mod);
-                char name[64] = {};
-                GetModuleFileNameA(mod, name, sizeof(name));
-                // Only log if vtable is in steamclient64
-                if (strstr(name, "steamclient"))
-                    Platform::Print("csgo_gc: ContextInit ctx[%d]=%p vtable=[%p,%p,%p] (%s)\n",
-                        i, (void*)ptr, (void*)fn0, (void*)fn1, (void*)fn2, name);
+                vtable[0] = reinterpret_cast<uintptr_t>(Hk_GC_SendMessage);
+                vtable[1] = reinterpret_cast<uintptr_t>(Hk_GC_IsMessageAvailable);
+                vtable[2] = reinterpret_cast<uintptr_t>(Hk_GC_RetrieveMessage);
+                VirtualProtect(vtable, 3 * sizeof(void *), oldProtect, &oldProtect);
+                s_gcMethodsHooked = true;
+                Platform::Print("csgo_gc: ContextInit patched GC vtable at ctx[%d]=%p\n", i, vtable);
             }
         }
     }
@@ -2888,7 +2909,7 @@ static int (*Og_SteamAPI_InitFlat)(void *pOutErrMsg);
 
 static void AfterSteamInit()
 {
-    if (s_gcMethodsHooked || s_clientGC)
+    if (s_clientGC)
         return;
 
     HSteamUser hUser = SteamAPI_GetHSteamUser();
