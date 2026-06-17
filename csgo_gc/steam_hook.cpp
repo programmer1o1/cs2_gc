@@ -2224,12 +2224,48 @@ static bool s_fetchingRealGC = false;
 struct SteamRawCallbackMsg { int hUser; int id; uint8_t *data; int size; };
 static bool (*Og_Steam_BGetCallback)(HSteamPipe, SteamRawCallbackMsg *, bool *);
 
+static void (*Og_Steam_FreeLastCallback)(HSteamPipe);
+
+static void Hk_Steam_FreeLastCallback(HSteamPipe hPipe)
+{
+    if (s_bgetLastWasInjected)
+    {
+        s_bgetLastWasInjected = false;
+        return;
+    }
+    Og_Steam_FreeLastCallback(hPipe);
+}
+
+static GCMessageAvailable_t s_bgetInjectedMsg{};
+static bool s_bgetLastWasInjected = false;
+
 static bool Hk_Steam_BGetCallback(HSteamPipe hPipe, SteamRawCallbackMsg *pMsg, bool *pbServer)
 {
     bool result = Og_Steam_BGetCallback(hPipe, pMsg, pbServer);
     if (result)
+    {
         Platform::Print("csgo_gc: Steam_BGetCallback id=%d server=%d\n", pMsg->id, (int)*pbServer);
-    return result;
+        s_bgetLastWasInjected = false;
+        return true;
+    }
+    // Inject GCMessageAvailable_t (id=1701) when our ClientGC queue has messages.
+    // This fires regardless of which callback delivery path the game uses.
+    if (s_clientGC && !*pbServer)
+    {
+        uint32_t msgSize;
+        if (s_clientGC->m_messageQueue.IsMessageAvailable(msgSize))
+        {
+            s_bgetInjectedMsg.m_nMessageSize = msgSize;
+            pMsg->hUser = SteamAPI_GetHSteamUser();
+            pMsg->id    = GCMessageAvailable_t::k_iCallback; // 1701
+            pMsg->data  = reinterpret_cast<uint8_t *>(&s_bgetInjectedMsg);
+            pMsg->size  = sizeof(GCMessageAvailable_t);
+            s_bgetLastWasInjected = true;
+            Platform::Print("csgo_gc: Steam_BGetCallback injecting GCMessageAvailable_t size=%u\n", msgSize);
+            return true;
+        }
+    }
+    return false;
 }
 #endif
 
@@ -2733,17 +2769,24 @@ static void InstallSteamClientHooks(void *preloadedModule = nullptr)
     INLINE_HOOK(CreateInterface);
 
 #ifdef _WIN32
-    // Hook Steam_BGetCallback from steamclient64 — the raw callback pump used by
-    // both SteamAPI_RunCallbacks and SteamAPI_ManualDispatch_GetNextCallback.
-    // Logging here shows every callback id the game receives, including GC ones.
+    // Hook Steam_BGetCallback / Steam_FreeLastCallback from steamclient64.
+    // These are the raw callback pump used by RunCallbacks and ManualDispatch.
     {
-        void *fnBGet = GetProcAddress(steamclientModule, "Steam_BGetCallback");
+        void *fnBGet  = GetProcAddress(steamclientModule, "Steam_BGetCallback");
+        void *fnFree  = GetProcAddress(steamclientModule, "Steam_FreeLastCallback");
         if (fnBGet)
         {
             HookCreate("Steam_BGetCallback", fnBGet,
                 reinterpret_cast<void *>(Hk_Steam_BGetCallback),
                 reinterpret_cast<void **>(&Og_Steam_BGetCallback));
             Platform::Print("csgo_gc: hooked Steam_BGetCallback\n");
+        }
+        if (fnFree)
+        {
+            HookCreate("Steam_FreeLastCallback", fnFree,
+                reinterpret_cast<void *>(Hk_Steam_FreeLastCallback),
+                reinterpret_cast<void **>(&Og_Steam_FreeLastCallback));
+            Platform::Print("csgo_gc: hooked Steam_FreeLastCallback\n");
         }
     }
 #endif
