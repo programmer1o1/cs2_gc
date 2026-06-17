@@ -2286,6 +2286,7 @@ static void *(*Og_SteamInternal_FindOrCreateUserInterface)(HSteamUser, const cha
 
 static void *Hk_SteamInternal_FindOrCreateUserInterface(HSteamUser hSteamUser, const char *pszVersion)
 {
+    Platform::Print("csgo_gc: Hk_SteamInternal_FindOrCreateUserInterface(\"%s\") user=%d\n", pszVersion, (int)hSteamUser);
     void *result = Og_SteamInternal_FindOrCreateUserInterface(hSteamUser, pszVersion);
 
     if (strcmp(pszVersion, STEAMGAMECOORDINATOR_INTERFACE_VERSION) == 0)
