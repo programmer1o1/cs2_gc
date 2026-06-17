@@ -2082,6 +2082,10 @@ static void HookCreate(const char *name, void *target, void *hook, void **bridge
 static bool s_gcIfaceHookInstalled = false;
 static SteamGameCoordinatorProxy *s_cs2GCProxy;
 static SteamGameCoordinatorProxy *s_cs2GCProxyServer;
+// Remember the client's pipe/user so we can route re-requests back to the
+// client proxy instead of the server proxy.
+static HSteamUser s_clientHSteamUser = 0;
+static HSteamPipe s_clientHSteamPipe = 0;
 static void *(*Og_GetISteamGenericInterface_direct)(void *, HSteamUser, HSteamPipe, const char *);
 
 static void *Hk_GetISteamGenericInterface_direct(void *thisptr, HSteamUser hSteamUser, HSteamPipe hSteamPipe, const char *pchVersion)
@@ -2092,17 +2096,25 @@ static void *Hk_GetISteamGenericInterface_direct(void *thisptr, HSteamUser hStea
     {
         if (!s_cs2GCProxy)
         {
-            // First request: game client GC
+            // First request — always the game client GC.
             uint64_t steamId = SteamUser() ? SteamUser()->GetSteamID().ConvertToUint64() : 0;
             Platform::Print("csgo_gc: intercepted client GC via GetISteamGenericInterface, steamId=%llu\n", (unsigned long long)steamId);
+            s_clientHSteamUser = hSteamUser;
+            s_clientHSteamPipe = hSteamPipe;
             s_cs2GCProxy = new SteamGameCoordinatorProxy(steamId);
+            return s_cs2GCProxy;
+        }
+        // Subsequent requests: route by pipe/user handles.
+        // Same handles as the first request → game client re-requesting (e.g. after
+        // Steam reconnect or map change). Different handles → game server context.
+        if (hSteamUser == s_clientHSteamUser && hSteamPipe == s_clientHSteamPipe)
+        {
             return s_cs2GCProxy;
         }
         if (!s_cs2GCProxyServer)
         {
-            // Second request: game server GC (same process, listen server)
             Platform::Print("csgo_gc: intercepted server GC via GetISteamGenericInterface\n");
-            s_cs2GCProxyServer = new SteamGameCoordinatorProxy(0); // steamId=0 → m_server=true → creates s_serverGC
+            s_cs2GCProxyServer = new SteamGameCoordinatorProxy(0);
         }
         return s_cs2GCProxyServer;
     }
@@ -2280,7 +2292,14 @@ static void *Hk_SteamInternal_FindOrCreateUserInterface(HSteamUser hSteamUser, c
         {
             uint64_t steamId = SteamUser() ? SteamUser()->GetSteamID().ConvertToUint64() : 0;
             Platform::Print("csgo_gc: intercepted client GC via FindOrCreateUserInterface, steamId=%llu\n", (unsigned long long)steamId);
+            s_clientHSteamUser = hSteamUser;
             s_cs2GCProxy = new SteamGameCoordinatorProxy(steamId);
+            return s_cs2GCProxy;
+        }
+        // Route by HSteamUser: same as initial client request → client proxy,
+        // different → server proxy.
+        if (hSteamUser == s_clientHSteamUser)
+        {
             return s_cs2GCProxy;
         }
         if (!s_cs2GCProxyServer)
