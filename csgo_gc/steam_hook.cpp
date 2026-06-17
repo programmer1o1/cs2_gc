@@ -2259,39 +2259,12 @@ static void *Hk_SteamInternal_ContextInit(void *pContextData)
         if (!strstr(name, "steamclient"))
             continue;
 
-        // Already patched this vtable?
-        if (fn0 == reinterpret_cast<uintptr_t>(Hk_GC_SendMessage))
-        {
-            // Already patched — route client GC objects using this vtable
-            if (!s_gcClientVtableSlot0)
-                s_gcClientVtableSlot0 = reinterpret_cast<uintptr_t>(Og_GC_SendMessage);
-            continue;
-        }
-
-        Platform::Print("csgo_gc: ContextInit ctx[%d]=%p vtable=[%p,%p,%p] (%s)\n",
-            i, (void*)ptr, (void*)fn0, (void*)fn1, (void*)fn2, name);
-
-        // Patch this vtable and update our originals.
-        // First vtable we patch = client GC (appears solo in small contexts).
-        if (!s_gcMethodsHooked)
-        {
-            // Save originals from this vtable
-            Og_GC_SendMessage        = reinterpret_cast<EGCResults (*)(void *, uint32, const void *, uint32)>(fn0);
-            Og_GC_IsMessageAvailable = reinterpret_cast<bool (*)(void *, uint32 *)>(fn1);
-            Og_GC_RetrieveMessage    = reinterpret_cast<EGCResults (*)(void *, uint32 *, void *, uint32, uint32 *)>(fn2);
-            s_gcClientVtableSlot0    = fn0;
-
-            DWORD oldProtect;
-            if (VirtualProtect(vtable, 3 * sizeof(void *), PAGE_READWRITE, &oldProtect))
-            {
-                vtable[0] = reinterpret_cast<uintptr_t>(Hk_GC_SendMessage);
-                vtable[1] = reinterpret_cast<uintptr_t>(Hk_GC_IsMessageAvailable);
-                vtable[2] = reinterpret_cast<uintptr_t>(Hk_GC_RetrieveMessage);
-                VirtualProtect(vtable, 3 * sizeof(void *), oldProtect, &oldProtect);
-                s_gcMethodsHooked = true;
-                Platform::Print("csgo_gc: ContextInit patched GC vtable at ctx[%d]=%p\n", i, vtable);
-            }
-        }
+        // Log the object for analysis — do NOT patch yet (wrong vtable caused crash).
+        // Compare fn0 with our known GC vtable to identify the real ISteamGameCoordinator.
+        const char *gcMatch = (Og_GC_SendMessage && fn0 == reinterpret_cast<uintptr_t>(Og_GC_SendMessage))
+            ? " <== MATCHES GC vtable" : "";
+        Platform::Print("csgo_gc: ContextInit ctx[%d]=%p vtable=[%p,%p,%p]%s\n",
+            i, (void*)ptr, (void*)fn0, (void*)fn1, (void*)fn2, gcMatch);
     }
     return result;
 }
