@@ -9,11 +9,7 @@ namespace Platform
 using ConColorMsg_t = void (*)(const uint8_t *, const char *, ...);
 static ConColorMsg_t s_ConColorMsg;
 
-// gc_log.txt lives next to the other data files in game\csgo_gc\.
-// Use the same two-path fallback as config.txt: one path works from
-// the launcher CWD (game\) and the other from CS2's CWD (game\bin\win64\).
-static constexpr const char *LogPathFromCs2Cwd      = "../../csgo_gc/gc_log.txt";
-static constexpr const char *LogPathFromLauncherCwd = "csgo_gc/gc_log.txt";
+static char s_logPath[MAX_PATH];
 
 const char *DataDir()
 {
@@ -22,9 +18,20 @@ const char *DataDir()
 
 void Initialize()
 {
-    // Delete the old log from whichever CWD this runs in.
-    DeleteFileA(LogPathFromCs2Cwd);
-    DeleteFileA(LogPathFromLauncherCwd);
+    // Resolve the log path to an absolute path now (CWD is correct at init time).
+    // This ensures Print() works from any thread regardless of later CWD changes.
+    static const char *kRelPaths[] = { "../../csgo_gc/gc_log.txt", "csgo_gc/gc_log.txt" };
+    s_logPath[0] = '\0';
+    for (const char *rel : kRelPaths)
+    {
+        char abs[MAX_PATH];
+        if (GetFullPathNameA(rel, MAX_PATH, abs, nullptr))
+        {
+            // Check if the directory exists by trying to write
+            FILE *test = fopen(abs, "a");
+            if (test) { fclose(test); DeleteFileA(abs); strcpy_s(s_logPath, abs); break; }
+        }
+    }
 
     HMODULE tier0 = GetModuleHandleW(L"tier0.dll");
     if (tier0)
@@ -55,11 +62,9 @@ void Print(const char *format, ...)
         s_ConColorMsg(color, "[GC] %s", buffer);
     }
 
-    // optionally also log to file — try CS2 CWD path first, then launcher CWD path
-    if (logOutput >= LogOutputFile)
+    if (logOutput >= LogOutputFile && s_logPath[0])
     {
-        FILE *f = fopen(LogPathFromCs2Cwd, "a");
-        if (!f) f = fopen(LogPathFromLauncherCwd, "a");
+        FILE *f = fopen(s_logPath, "a");
         if (f)
         {
             fprintf(f, "%s", buffer);
