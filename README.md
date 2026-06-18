@@ -1,18 +1,23 @@
 # csgo_gc
 
-> [!CAUTION]
-> This project is incomplete and not ready for general use.
+> [!NOTE]
+> This is a **fork** of [mikkokko/csgo_gc](https://github.com/mikkokko/csgo_gc) focused on getting the
+> Game Coordinator working with **Counter-Strike 2**. It has diverged substantially from upstream:
+> the client now completes the CS2 GC handshake, loadouts load, equipped skins/gloves/agents apply in
+> offline/listen-server matches, loadout changes persist, and case opening works. It is still
+> experimental — expect rough edges.
 
 ## What is this?
-In Valve games, the Game Coordinator (GC) is a backend service most notably responsible for matchmaking and inventory management (like loadouts and skins). This project redirects the GC traffic to a custom, in-process implementation.
+In Valve games, the Game Coordinator (GC) is a backend service most notably responsible for matchmaking and inventory management (like loadouts and skins). This project redirects the GC traffic to a custom, in-process implementation, so your inventory is driven by a local `inventory.txt` instead of Valve's servers.
 
 ## Why would you want this?
-While it's still possible to connect CS:GO to CS2's GC by spoofing the version number, this may break in the future if Valve updates the GC protocol. This project aims to restore most GC-related functionality without relying on a centralized server.
+It restores most GC-related, inventory-side functionality (loadouts, skins, knives, gloves, agents, case opening, etc.) locally, without relying on a centralized server.
 
 ## Current features
-- Editable inventory (inventory.txt)
-- Item equipping
-- Opening cases (including sticker capsules, patch packs, graffiti boxes and music kit boxes)
+- Editable inventory (`inventory.txt`)
+- Loadout editing that **persists** (weapon/skin changes, base-weapon swaps like USP-S/P2000, save across restarts)
+- Equipped items apply **in matches** (offline practice / bots / your own listen server)
+- Knives, **gloves**, and **agents**
 - Graffiti support
 - Weapon StatTrak support
 - Storage Units
@@ -21,52 +26,61 @@ While it's still possible to connect CS:GO to CS2's GC by spoofing the version n
 - Stickers and patches
 - Name tags
 - Music kits
+- Opening cases (including sticker capsules, patch packs, graffiti boxes and music kit boxes)
 - In-game store
 - Works without full Steam API emulation
-- Full Windows, Linux and macOS support
-- Functional lobbies
-- Dedicated server support
-- Functional server browser (only shows csgo_gc servers by default)
+- Windows, Linux and macOS support
 - Networking using Steam's P2P interface
 
-## Planned features
-- Rest of the core features (souvenirs...)
-
-I'm still looking for the **full** CS:GO Item Schema. If you have a relatively recent copy of it and are willing to share it, let me know!
-
-## Not planned
-- Matchmaking (can't be implemented without a centralized server)
+## Scope / limitations
+- **Skins only apply on servers running csgo_gc** — i.e. offline practice, workshop maps, or your own
+  listen/dedicated server. Valve matchmaking and community servers run their own GC and will show
+  default weapons; this cannot be changed.
+- **Matchmaking is not supported** and can't be (it requires a centralized server).
 
 ## Installation
-- Download [CS:GO from Steam](steam://install/4465480)
-- Download the latest release for your platform from the [releases page](https://github.com/mikkokko/csgo_gc/releases/latest)
+- Download the game from Steam
+- Download the latest build for your platform from the [releases page](https://github.com/programmer1o1/csgo_gc/releases) (the `continuous` release is built automatically from the latest commit)
 - Navigate to the game's installation directory
-- Back up your existing launcher executables as they'll be overwritten (i.e. csgo.exe, srcds.exe, csgo_linux64, etc.)
-- Extract the contents of the downloaded archive to your game directory, replace the executables when prompted
-- Launch the game. If you get the annoying VAC message box, launch the game with the -steam argument
-- macOS users: The release binaries are not notarized, so if you're using them, you'll have to deal with that somehow
+- Back up your existing launcher executables as they'll be overwritten (e.g. `csgo.exe`, `cs2.exe`, `srcds.exe`, `csgo_linux64`, etc.)
+- Extract the contents of the downloaded archive to your game directory, replacing the executables when prompted
+- Launch the game. If you get the VAC message box, launch with the `-steam` argument
+- macOS users: the release binaries are not notarized, so you'll have to deal with that on your end
 
 ## Inventory editing
-For GUI inventory editors, see https://github.com/mikkokko/csgo_gc/issues/82. For manual editing, there is a guide made by someone else [here](https://gist.github.com/dricotec/1ae3deb06c42012970c00df914348e76).
+Edit `csgo_gc/inventory.txt` (in the game's `game/` directory) directly, or use a GUI editor.
+A manual-editing guide made by someone else is [here](https://gist.github.com/dricotec/1ae3deb06c42012970c00df914348e76).
+
+> [!TIP]
+> The game rewrites `inventory.txt` whenever you change your loadout in the menu, so do any manual or
+> external edits **while the game is closed** — otherwise the game's save will overwrite them.
 
 ## Configuration
-See [csgo_gc/config.txt](examples/config.txt) for available options.
+See [examples/config.txt](examples/config.txt) for available options.
 
 ## Building
 Requirements:
 - Git
 - CMake 3.20 or newer
-- C++ compiler with C++17 support (VS 2017 or later, Clang 5 or later, GCC 7 or later)
+- C++ compiler with C++20 support (VS 2022, recent Clang, or recent GCC)
 
-The game is 32-bit on Windows so you need to build as 32-bit:
+The CS:GO client and Linux dedicated server binaries are 32-bit; CS2 (`cs2`) is 64-bit. The build
+produces both as appropriate. See [.github/workflows/build.yml](.github/workflows/build.yml) for the
+exact, per-platform commands used by CI.
+
+Windows (32-bit targets):
 
 `cmake -A Win32 -B build`
 
-Linux dedicated servers are also 32-bit:
+Windows (64-bit / CS2):
+
+`cmake -A x64 -B build_x64`
+
+Linux dedicated server (32-bit):
 
 `cmake -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32 -B build`
 
-On macOS, you need to build for x86_64 instead of arm64:
+macOS (build for x86_64, not arm64):
 
 `cmake -DCMAKE_OSX_ARCHITECTURES=x86_64 -DFUNCHOOK_CPU=x86 -B build`
 
@@ -76,8 +90,9 @@ For Linux clients you don't have to specify any additional options.
 This project is licensed under the 2-Clause BSD License. See [LICENSE.md](LICENSE.md) for details.
 
 ## Credits
-* **Mikko Kokko** - Author
-* **Theeto** - Code reused from the predecessor project, unusual loot lists
+* **Mikko Kokko** — Original author of [csgo_gc](https://github.com/mikkokko/csgo_gc)
+* **Theeto** — Code reused from the predecessor project, unusual loot lists
+* Fork maintainer — CS2 GC connectivity, in-match inventory, gloves/agents, loadout persistence, and case-opening work
 
 ## Third party dependencies
 - [Crypto++](https://github.com/weidai11/cryptopp) ([Boost Software License](https://github.com/weidai11/cryptopp/blob/master/License.txt))
