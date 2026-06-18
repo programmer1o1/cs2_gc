@@ -956,7 +956,7 @@ void ClientGC::OpenCrate(GCMessageRead &messageRead)
         return;
     }
 
-    DoUnlockCrate(crateId, keyId);
+    DoUnlockCrate(crateId, keyId, messageRead.JobId());
 }
 
 void ClientGC::UnlockCrate(GCMessageRead &messageRead)
@@ -969,10 +969,10 @@ void ClientGC::UnlockCrate(GCMessageRead &messageRead)
         return;
     }
 
-    DoUnlockCrate(crateId, keyId);
+    DoUnlockCrate(crateId, keyId, messageRead.JobId());
 }
 
-void ClientGC::DoUnlockCrate(uint64_t crateId, uint64_t keyId)
+void ClientGC::DoUnlockCrate(uint64_t crateId, uint64_t keyId, uint64_t jobId)
 {
     Platform::Print("CASE OPENING %llu with %llu\n", crateId, keyId);
 
@@ -996,9 +996,12 @@ void ClientGC::DoUnlockCrate(uint64_t crateId, uint64_t keyId)
         SendMessageToGame(true, k_ESOMsg_Create, newItem);
 
         // Now send the response (result=0). Client will find the origin==5 item.
+        // The unlock is a GC *job*: the response MUST echo the request's job id, or
+        // the client's pending job never completes and it shows "we are unable to
+        // receive your items" even though the item was already granted.
         {
             CMsgGCItemCustomizationNotification emptyResponse;
-            SendMessageToGame(false, k_EMsgGCUnlockCrateResponse, emptyResponse);
+            SendMessageToGame(false, k_EMsgGCUnlockCrateResponse, emptyResponse, jobId);
         }
 
         SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);

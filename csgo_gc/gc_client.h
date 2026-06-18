@@ -43,7 +43,7 @@ private:
     void DeleteItem(GCMessageRead &messageRead);
     void UnlockCrate(GCMessageRead &messageRead);
     void OpenCrate(GCMessageRead &messageRead);
-    void DoUnlockCrate(uint64_t crateId, uint64_t keyId);
+    void DoUnlockCrate(uint64_t crateId, uint64_t keyId, uint64_t jobId);
     void Craft(GCMessageRead &messageRead);
     void NameItem(GCMessageRead &messageRead);
     void NameBaseItem(GCMessageRead &messageRead);
