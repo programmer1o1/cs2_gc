@@ -2777,6 +2777,19 @@ static void AfterSteamInit()
     {
         Platform::Print("csgo_gc: s_cs2GCProxy already exists\n");
     }
+
+    // Proactively post a fake GCClientHello to our local ClientGC so it immediately
+    // replies with GCClientWelcome + ConnectionStatus(HAVE_SESSION).
+    // CS2's sub_181520010 has a *(a1+968) flag that may be 0, preventing the game
+    // from sending ClientHello via its own timer. This bypasses that issue entirely.
+    if (s_clientGC)
+    {
+        // k_EMsgGCClientHello = 4006, with protobuf flag bit = 4006 | 0x80000000
+        static const uint8_t emptyProto[1] = { 0 }; // minimal valid empty protobuf
+        s_clientGC->m_gc.PostToGC(GCEvent::Message, k_EMsgGCClientHello | 0x80000000u,
+            emptyProto, sizeof(emptyProto));
+        Platform::Print("csgo_gc: posted fake GCClientHello to trigger ClientWelcome\n");
+    }
 }
 
 static int Hk_SteamAPI_InitFlat(void *pOutErrMsg)
