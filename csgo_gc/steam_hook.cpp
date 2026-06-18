@@ -2567,7 +2567,23 @@ static void Hk_SteamAPI_RunCallbacks()
                 break;
 
             case HostEvent::NetMessage:
-                s_clientGC->m_networking.SendMessage(event.buffer.data(), static_cast<uint32_t>(event.buffer.size()));
+                // On a listen server (offline practice / "host with bots") the game server
+                // runs in THIS process, so both s_serverGC and s_clientGC exist. Offline
+                // games never run the Steam auth handshake (BeginAuthSession -> NetworkConnect),
+                // so NetworkingClient::m_serverSteamId is never set and SendMessage silently
+                // drops the player's SO cache — the server then has no items and spawns plain
+                // default weapons with no skins. Deliver the cache straight to the in-process
+                // server GC instead; only fall back to the P2P send for remote dedicated servers.
+                if (s_serverGC)
+                {
+                    uint64_t steamId = SteamUser() ? SteamUser()->GetSteamID().ConvertToUint64() : 0;
+                    s_serverGC->m_gc.PostToGC(GCEvent::NetMessage, steamId,
+                        event.buffer.data(), static_cast<uint32_t>(event.buffer.size()));
+                }
+                else
+                {
+                    s_clientGC->m_networking.SendMessage(event.buffer.data(), static_cast<uint32_t>(event.buffer.size()));
+                }
                 break;
 
             case HostEvent::MicroTransactionResponse:
