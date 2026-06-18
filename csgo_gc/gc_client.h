@@ -28,6 +28,7 @@ private:
 
     void OnClientHello(GCMessageRead &messageRead);
     void AdjustItemEquippedState(GCMessageRead &messageRead);
+    void AdjustEquipSlots(GCMessageRead &messageRead);
     void ClientPlayerDecalSign(GCMessageRead &messageRead);
     void UseItemRequest(GCMessageRead &messageRead);
     void ClientRequestJoinServerData(GCMessageRead &messageRead);

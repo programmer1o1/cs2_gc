@@ -24,6 +24,9 @@ public:
 
     bool EquipItem(uint64_t itemId, uint32_t classId, uint32_t slotId, CMsgSOMultipleObjects &update);
 
+    // persist the current inventory to disk (loadout/equip changes, etc.)
+    void Save() const { WriteToFile(); }
+
     bool RemoveItem(uint64_t itemId, CMsgSOSingleObject &destroy);
 
     bool UseItem(uint64_t itemId,

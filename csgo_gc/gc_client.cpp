@@ -244,6 +244,10 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
             AdjustItemEquippedState(messageRead);
             break;
 
+        case k_EMsgGCAdjustEquipSlots:
+            AdjustEquipSlots(messageRead);
+            break;
+
         case k_EMsgGCCStrike15_v2_ClientPlayerDecalSign:
             ClientPlayerDecalSign(messageRead);
             break;
@@ -557,6 +561,40 @@ void ClientGC::AdjustItemEquippedState(GCMessageRead &messageRead)
 
     // let the gameserver know, too
     SendMessageToGame(true, k_ESOMsg_UpdateMultiple, update);
+
+    m_inventory.Save();
+}
+
+// CS2 sends the batch CMsgAdjustEquipSlots (k_EMsgGCAdjustEquipSlots) instead of the
+// per-item k_EMsgGCAdjustItemEquippedState when you change your loadout (equip a
+// different weapon/skin, swap the CT pistol, etc.). Without handling it the change is
+// never applied or persisted, so the loadout reverts after you leave the menu / restart.
+void ClientGC::AdjustEquipSlots(GCMessageRead &messageRead)
+{
+    CMsgAdjustEquipSlots message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CMsgAdjustEquipSlots failed, ignoring\n");
+        return;
+    }
+
+    CMsgSOMultipleObjects update;
+    bool changed = false;
+    for (const CMsgAdjustEquipSlot &slot : message.slots())
+    {
+        if (m_inventory.EquipItem(slot.item_id(), slot.class_id(), slot.slot_id(), update))
+            changed = true;
+    }
+
+    if (!changed)
+        return;
+
+    RefreshCachedMusicKitMVPs();
+
+    SendMessageToGame(true, k_ESOMsg_UpdateMultiple, update);
+
+    // persist the loadout change immediately so it survives a restart
+    m_inventory.Save();
 }
 
 void ClientGC::ClientPlayerDecalSign(GCMessageRead &messageRead)
