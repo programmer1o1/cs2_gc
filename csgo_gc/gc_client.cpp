@@ -1033,16 +1033,17 @@ void ClientGC::DoUnlockCrate(uint64_t crateId, uint64_t keyId, uint64_t jobId)
         SendMessageToGame(true, k_ESOMsg_Destroy, destroyKey);
         SendMessageToGame(true, k_ESOMsg_Create, newItem);
 
-        // Now send the response (result=0). Client will find the origin==5 item.
-        // The unlock is a GC *job*: the response MUST echo the request's job id, or
-        // the client's pending job never completes and it shows "we are unable to
-        // receive your items" even though the item was already granted.
+        // Legacy ack (kept for the old struct-based flow); not the job reply.
         {
             CMsgGCItemCustomizationNotification emptyResponse;
-            SendMessageToGame(false, k_EMsgGCUnlockCrateResponse, emptyResponse, jobId);
+            SendMessageToGame(false, k_EMsgGCUnlockCrateResponse, emptyResponse);
         }
 
-        SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);
+        // Opening a crate is a GC *job*: the client waits for the item-customization
+        // notification (the "here's what you unboxed" message) carrying its job id.
+        // Without the matching job id the job times out and the client shows "we are
+        // unable to receive your items" even though the item was already granted.
+        SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification, jobId);
     }
     else
     {
