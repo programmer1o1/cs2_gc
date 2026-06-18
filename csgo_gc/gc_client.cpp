@@ -296,6 +296,10 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
             HandleEconPreviewDataBlockRequest(messageRead);
             break;
 
+        case k_EMsgGCOpenCrate:
+            OpenCrate(messageRead);
+            break;
+
         default:
             Platform::Print("ClientGC::HandleMessage: unhandled protobuf message %s\n",
                 MessageName(messageRead.TypeUnmasked()));
@@ -881,6 +885,20 @@ void ClientGC::DeleteItem(GCMessageRead &messageRead)
     }
 }
 
+// CS2 replaced the deprecated struct-based k_EMsgGCUnlockCrate with the protobuf
+// k_EMsgGCOpenCrate (CMsgOpenCrate): tool_item_id = key, subject_item_id = crate.
+void ClientGC::OpenCrate(GCMessageRead &messageRead)
+{
+    CMsgOpenCrate message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CMsgOpenCrate failed, ignoring\n");
+        return;
+    }
+
+    DoUnlockCrate(message.subject_item_id(), message.tool_item_id());
+}
+
 void ClientGC::UnlockCrate(GCMessageRead &messageRead)
 {
     uint64_t keyId = messageRead.ReadUint64();
@@ -891,6 +909,11 @@ void ClientGC::UnlockCrate(GCMessageRead &messageRead)
         return;
     }
 
+    DoUnlockCrate(crateId, keyId);
+}
+
+void ClientGC::DoUnlockCrate(uint64_t crateId, uint64_t keyId)
+{
     Platform::Print("CASE OPENING %llu with %llu\n", crateId, keyId);
 
     CMsgSOSingleObject destroyCrate, destroyKey, newItem;
