@@ -994,7 +994,36 @@ void ClientGC::OpenCrate(GCMessageRead &messageRead)
         return;
     }
 
-    DoUnlockCrate(crateId, keyId, messageRead.JobId());
+    // CS2 unboxes in two steps via the X-ray scanner: a scan (preview what's inside) then a
+    // commit (claim it). We treat the first OpenCrate for a crate as the scan and the next
+    // for the same crate as the commit. Sending the old one-step unlock here makes the
+    // scanner UI never get its XRayItemReveal and show "Steam Connection Error".
+    if (!m_inventory.HasPendingScan(crateId))
+    {
+        Platform::Print("OpenCrate SCAN crate=%llu key=%llu\n", crateId, keyId);
+
+        CMsgSOSingleObject newItem;
+        CMsgGCItemCustomizationNotification notification;
+        if (m_inventory.ScanCrate(crateId, newItem, notification))
+        {
+            // Create the item first so the scanner can find it, then reveal it (no consume).
+            SendMessageToGame(true, k_ESOMsg_Create, newItem);
+            SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);
+        }
+    }
+    else
+    {
+        Platform::Print("OpenCrate COMMIT crate=%llu key=%llu\n", crateId, keyId);
+
+        CMsgSOSingleObject destroyCrate, destroyKey;
+        CMsgGCItemCustomizationNotification notification;
+        if (m_inventory.CommitCrate(crateId, keyId, destroyCrate, destroyKey, notification))
+        {
+            SendMessageToGame(true, k_ESOMsg_Destroy, destroyCrate);
+            SendMessageToGame(true, k_ESOMsg_Destroy, destroyKey);
+            SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);
+        }
+    }
 }
 
 void ClientGC::UnlockCrate(GCMessageRead &messageRead)

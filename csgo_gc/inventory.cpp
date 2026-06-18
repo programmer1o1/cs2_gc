@@ -644,6 +644,83 @@ bool Inventory::UnlockCrate(uint64_t crateId,
     return true;
 }
 
+bool Inventory::HasPendingScan(uint64_t crateId) const
+{
+    return m_pendingScans.find(crateId) != m_pendingScans.end();
+}
+
+// X-ray step 1: pick + create the item and preview it (XRayItemReveal) WITHOUT consuming
+// the crate/key. The selection is held in escrow until the matching CommitCrate.
+bool Inventory::ScanCrate(uint64_t crateId,
+    CMsgSOSingleObject &newItem,
+    CMsgGCItemCustomizationNotification &notification)
+{
+    auto crate = m_items.find(crateId);
+    if (crate == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    CaseOpening caseOpening{ m_itemSchema, m_random };
+
+    CSOEconItem temp;
+    if (!caseOpening.SelectItemFromCrate(crate->second, temp))
+    {
+        assert(false);
+        return false;
+    }
+
+    CSOEconItem &item = CreateItem(temp);
+    item.set_inventory(static_cast<uint32_t>(m_items.size()));
+    ToSingleObject(newItem, item);
+
+    notification.add_item_id(item.id());
+    notification.set_request(k_EGCItemCustomizationNotification_XRayItemReveal);
+
+    m_pendingScans[crateId] = item.id();
+
+    WriteToFile();
+    return true;
+}
+
+// X-ray step 2: consume the crate/key and claim the previously scanned item (XRayItemClaim).
+bool Inventory::CommitCrate(uint64_t crateId,
+    uint64_t keyId,
+    CMsgSOSingleObject &destroyCrate,
+    CMsgSOSingleObject &destroyKey,
+    CMsgGCItemCustomizationNotification &notification)
+{
+    auto scan = m_pendingScans.find(crateId);
+    if (scan == m_pendingScans.end())
+    {
+        return false;
+    }
+
+    notification.add_item_id(scan->second);
+    notification.set_request(k_EGCItemCustomizationNotification_XRayItemClaim);
+
+    if (GetConfig().DestroyUsedItems())
+    {
+        auto crate = m_items.find(crateId);
+        if (crate != m_items.end())
+        {
+            DestroyItem(crate, destroyCrate);
+        }
+
+        auto key = m_items.find(keyId);
+        if (key != m_items.end())
+        {
+            DestroyItem(key, destroyKey);
+        }
+    }
+
+    m_pendingScans.erase(scan);
+
+    WriteToFile();
+    return true;
+}
+
 // mikkotodo constant enum
 static int ItemWearLevel(float wearFloat)
 {

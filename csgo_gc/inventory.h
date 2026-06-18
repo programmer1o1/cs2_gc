@@ -41,6 +41,19 @@ public:
         CMsgSOSingleObject &newItem,
         CMsgGCItemCustomizationNotification &notification);
 
+    // CS2's two-step "X-ray" unboxing. ScanCrate selects + creates the item and previews
+    // it (XRayItemReveal) without consuming the crate/key; CommitCrate then consumes the
+    // crate/key and claims the previewed item (XRayItemClaim).
+    bool HasPendingScan(uint64_t crateId) const;
+    bool ScanCrate(uint64_t crateId,
+        CMsgSOSingleObject &newItem,
+        CMsgGCItemCustomizationNotification &notification);
+    bool CommitCrate(uint64_t crateId,
+        uint64_t keyId,
+        CMsgSOSingleObject &destroyCrate,
+        CMsgSOSingleObject &destroyKey,
+        CMsgGCItemCustomizationNotification &notification);
+
     bool SetItemPositions(
         const CMsgSetItemPositions &message,
         std::vector<CMsgItemAcknowledged> &acknowledgements,
@@ -211,4 +224,8 @@ private:
     uint32_t m_lastHighItemId{};
     ItemMap m_items;
     std::vector<CSOEconDefaultEquippedDefinitionInstanceClient> m_defaultEquips;
+
+    // X-ray escrow: crate item id -> the item id selected/created by ScanCrate, claimed by
+    // the matching CommitCrate.
+    std::unordered_map<uint64_t, uint64_t> m_pendingScans;
 };
