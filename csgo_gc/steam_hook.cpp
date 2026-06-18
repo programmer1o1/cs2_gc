@@ -2784,10 +2784,12 @@ static void AfterSteamInit()
     // from sending ClientHello via its own timer. This bypasses that issue entirely.
     if (s_clientGC)
     {
-        // k_EMsgGCClientHello = 4006, with protobuf flag bit = 4006 | 0x80000000
-        static const uint8_t emptyProto[1] = { 0 }; // minimal valid empty protobuf
+        // GCMessageRead reads 4 bytes for type + 4 bytes for headerSize from data
+        // before using the provided type override. Need ≥8 bytes: type(4) + headerSize=0(4).
+        // CMsgClientHello payload is empty (all fields optional) = 0 bytes after the header.
+        static const uint8_t fakeHello[8] = { 0 }; // type(4 ignored) + headerSize=0(4)
         s_clientGC->m_gc.PostToGC(GCEvent::Message, k_EMsgGCClientHello | 0x80000000u,
-            emptyProto, sizeof(emptyProto));
+            fakeHello, sizeof(fakeHello));
         Platform::Print("csgo_gc: posted fake GCClientHello to trigger ClientWelcome\n");
     }
 }
