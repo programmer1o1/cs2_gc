@@ -616,14 +616,23 @@ public:
         {
             if (cubDest < *pcubMsgSize)
             {
+                // CS2's GC pump loops `while (IsMessageAvailable) RetrieveMessage`. Leaving
+                // a too-large message in the queue spins that loop forever and freezes the
+                // client, so drop it to guarantee forward progress (see Hk_GC_RetrieveMessage).
+                Platform::Print("csgo_gc: GCProxy::RetrieveMessage BUFFER TOO SMALL cubDest=%u need=%u server=%d — dropping to avoid freeze\n",
+                    cubDest, *pcubMsgSize, (int)m_server);
+                if (m_server)
+                    s_serverGC->m_messageQueue.DropMessage();
+                else
+                    s_clientGC->m_messageQueue.DropMessage();
                 return k_EGCResultBufferTooSmall;
             }
 
             return k_EGCResultNoMessage;
         }
 
-        Platform::Print("csgo_gc: GCProxy::RetrieveMessage type=%u size=%u server=%d\n",
-            *punMsgType, *pcubMsgSize, (int)m_server);
+        Platform::Print("csgo_gc: GCProxy::RetrieveMessage type=%u size=%u cubDest=%u server=%d\n",
+            *punMsgType, *pcubMsgSize, cubDest, (int)m_server);
         return k_EGCResultOK;
     }
 };
