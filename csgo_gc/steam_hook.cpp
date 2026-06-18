@@ -2130,6 +2130,9 @@ static void HookCreate(const char *name, void *target, void *hook, void **bridge
 // used to obtain the interface pointer.
 #ifdef _WIN32
 static bool s_gcMethodsHooked = false;
+// Set once CS2 itself requests the GC interface, i.e. its CCSGCClientSystem has begun
+// connecting in response to our injected SteamServersConnected_t. Used to stop nudging.
+static bool s_cs2RequestedGC = false;
 static EGCResults (*Og_GC_SendMessage)(void *, uint32, const void *, uint32);
 static bool (*Og_GC_IsMessageAvailable)(void *, uint32 *);
 static EGCResults (*Og_GC_RetrieveMessage)(void *, uint32 *, void *, uint32, uint32 *);
@@ -2242,6 +2245,14 @@ static void *Hk_GetISteamGenericInterface_direct(void *thisptr, HSteamUser hStea
         // AfterSteamInit is fetching the real GC object to patch its vtable — pass through.
         if (s_fetchingRealGC)
             return result;
+
+        // CS2 requested the GC itself → its GC client is connecting. Stop the
+        // SteamServersConnected_t nudging.
+        if (!s_cs2RequestedGC)
+        {
+            s_cs2RequestedGC = true;
+            Platform::Print("csgo_gc: CS2 requested GC interface — connect path triggered\n");
+        }
 
         if (!s_cs2GCProxy)
         {
@@ -2440,6 +2451,14 @@ static void *Hk_SteamInternal_FindOrCreateUserInterface(HSteamUser hSteamUser, c
 
     if (strcmp(pszVersion, STEAMGAMECOORDINATOR_INTERFACE_VERSION) == 0)
     {
+        // CS2 requested the GC itself (AfterSteamInit's fetch calls Og_ directly, bypassing
+        // this hook) → its GC client is connecting. Stop the SteamServersConnected_t nudging.
+        if (!s_cs2RequestedGC)
+        {
+            s_cs2RequestedGC = true;
+            Platform::Print("csgo_gc: CS2 requested GC interface — connect path triggered\n");
+        }
+
         if (!s_cs2GCProxy)
         {
             uint64_t steamId = SteamUser() ? SteamUser()->GetSteamID().ConvertToUint64() : 0;
@@ -2723,12 +2742,39 @@ static bool s_gcMsgInjected = false;
 // it gates injection to at most once per RunCallbacks tick to avoid the pump-loop freeze.
 static uint32_t s_gcLastAnnouncedSize = 0;
 
+// CS2's CCSGCClientSystem only initiates the GC session (acquires the GC interface,
+// registers the GCMessageAvailable handler, sends ClientHello) in response to a
+// SteamServersConnected_t (id 101) callback. In our spoofed/offline setup that callback
+// never fires, so the GC client never connects and the loadout reports "Couldn't connect
+// to Steam servers". Keep faking it once per tick until CS2 reacts by requesting the GC
+// interface (s_cs2RequestedGC, set in Hk_GetISteamGenericInterface_direct), then stop.
+// Capped so we never nudge forever if CS2 ignores it.
+static SteamServersConnected_t s_steamServersConnected{};
+// s_cs2RequestedGC is declared up in the GC-vtable section (before the GetGeneric hook).
+static int s_steamServersConnectedTicksLeft = 600;
+
 static bool Hk_Steam_BGetCallback(HSteamPipe hPipe, SteamRawMsg *pMsg, bool *pbServer)
 {
     bool result = Og_Steam_BGetCallback(hPipe, pMsg, pbServer);
     if (result) return true;
     if (s_clientGC && !s_gcInjectedThisTick)
     {
+        // Drive the GC connection by faking SteamServersConnected_t until CS2 reacts.
+        if (!s_cs2RequestedGC && s_steamServersConnectedTicksLeft > 0)
+        {
+            pMsg->hUser = SteamAPI_GetHSteamUser();
+            pMsg->id    = SteamServersConnected_t::k_iCallback;
+            pMsg->data  = reinterpret_cast<uint8_t *>(&s_steamServersConnected);
+            pMsg->size  = sizeof(SteamServersConnected_t);
+            *pbServer   = false;
+            s_gcMsgInjected = true;
+            s_gcInjectedThisTick = true;
+            if (s_steamServersConnectedTicksLeft == 600)
+                Platform::Print("csgo_gc: injecting SteamServersConnected_t to trigger GC connect\n");
+            s_steamServersConnectedTicksLeft--;
+            return true;
+        }
+
         uint32_t sz;
         if (s_clientGC->m_messageQueue.IsMessageAvailable(sz))
         {
