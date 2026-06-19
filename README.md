@@ -4,8 +4,8 @@
 > This is a **fork** of [mikkokko/csgo_gc](https://github.com/mikkokko/csgo_gc) focused on getting the
 > Game Coordinator working with **Counter-Strike 2**. It has diverged substantially from upstream:
 > the client now completes the CS2 GC handshake, loadouts load, equipped skins/gloves/agents apply in
-> offline/listen-server matches, loadout changes persist, and case opening works. It is still
-> experimental — expect rough edges.
+> offline/listen-server matches, and loadout changes persist. It is still experimental — expect rough
+> edges (notably, case opening does not work on CS2 yet; see [Scope / limitations](#scope--limitations)).
 
 ## What is this?
 In Valve games, the Game Coordinator (GC) is a backend service most notably responsible for matchmaking and inventory management (like loadouts and skins). This project redirects the GC traffic to a custom, in-process implementation, so your inventory is driven by a local `inventory.txt` instead of Valve's servers.
@@ -26,7 +26,6 @@ It restores most GC-related, inventory-side functionality (loadouts, skins, kniv
 - Stickers and patches
 - Name tags
 - Music kits
-- Opening cases (including sticker capsules, patch packs, graffiti boxes and music kit boxes)
 - In-game store
 - Works without full Steam API emulation
 - Windows, Linux and macOS support
@@ -37,6 +36,10 @@ It restores most GC-related, inventory-side functionality (loadouts, skins, kniv
   listen/dedicated server. Valve matchmaking and community servers run their own GC and will show
   default weapons; this cannot be changed.
 - **Matchmaking is not supported** and can't be (it requires a centralized server).
+- **Opening cases does not work on CS2.** The client unboxes via a Game Coordinator *job*
+  (`k_EMsgGCOpenCrate`); the local GC creates the item and answers the job, but CS2 still shows a
+  "we are unable to retrieve your item" dialog. The item is generated locally, so editing
+  `inventory.txt` directly is the way to add items for now.
 
 ## Installation
 - Download the game from Steam
@@ -92,7 +95,7 @@ This project is licensed under the 2-Clause BSD License. See [LICENSE.md](LICENS
 ## Credits
 * **Mikko Kokko** — Original author of [csgo_gc](https://github.com/mikkokko/csgo_gc)
 * **Theeto** — Code reused from the predecessor project, unusual loot lists
-* Fork maintainer — CS2 GC connectivity, in-match inventory, gloves/agents, loadout persistence, and case-opening work
+* Fork maintainer — CS2 GC connectivity, in-match inventory, gloves/agents, and loadout persistence
 
 ## Third party dependencies
 - [Crypto++](https://github.com/weidai11/cryptopp) ([Boost Software License](https://github.com/weidai11/cryptopp/blob/master/License.txt))
