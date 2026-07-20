@@ -65,10 +65,18 @@ static void BuildEconItem(const InventoryEntryTF2 &entry, uint64_t itemId, uint3
     item.set_inventory(static_cast<uint32_t>(itemId));
     item.set_def_index(entry.defIndex);
     item.set_quantity(1);
-    item.set_level(1);
+    // Unusual-quality items are always level 10 in TF2's real schema
+    // regardless of the base item (confirmed: Ghastly Gibus's real
+    // items_game.txt entry requires min_ilevel/max_ilevel = 10). Hardcoding
+    // level 1 for everything was likely making Unusual items fail
+    // client-side level-bounds validation. Non-Unusual items default to
+    // level 1 here since our minimal test schema doesn't track per-item
+    // ilevel bounds; if this fixes Unusuals but not plain items, that's
+    // the next place to look.
+    item.set_level(entry.hasParticle ? 10 : 1);
     item.set_quality(entry.quality);
     item.set_flags(0);
-    item.set_origin(0); // no origin history for a locally-injected backpack
+    item.set_origin(ItemOriginBaseItemTF2);
 
     if (entry.hasParticle)
     {

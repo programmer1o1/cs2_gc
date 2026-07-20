@@ -23,3 +23,10 @@ enum QualityTF2 : uint32_t
     QualityUnusualTF2 = 3,
     QualityUniqueTF2 = 4,
 };
+
+// CSOEconItem origin. csgo_gc/gc_const_csgo.h has the same named constant
+// (ItemOriginBaseItem = 22) for CS:GO's equivalent "locally-injected default
+// item" case; using 0 (plausibly k_EItemOriginInvalid in Valve's shared
+// origin enum) here instead was a candidate reason real-defindex items still
+// didn't show up in a live test.
+constexpr uint32_t ItemOriginBaseItemTF2 = 22;

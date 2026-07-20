@@ -232,6 +232,43 @@ Ghastly Gibus) and particle ids (`9`/`10`/`13`/`14`) verified directly
 against a real TF2 install's `items_game.txt`. Attribute `134` ("attach
 particle effect") was already correct.
 
+## Fifth real launch result (2026-07-20, real defindexes still don't show up)
+
+Still no backpack items, even with real, schema-verified defindexes/particle
+ids. `CMsgRequestInventoryRefresh` kept recurring on a steady interval rather
+than the earlier "3 tries then silence" pattern — in hindsight that may just
+be TF2's backpack UI periodically re-syncing regardless of item validity,
+not necessarily a rejection signal; that theory was likely wrong.
+
+Went back into `client.dll` looking for schema-validation logic. Ruled out
+one lead (`CMsgClientWelcome.game_data`, which `CTFGCClientSystem::OnClientWelcome`
+only reads if a "has" bit is set, and we never populate it): the function
+that consumes it (`sub_18091AF40`) turned out to be generic string-copy
+bookkeeping, not schema/version validation, so leaving `game_data` unset is
+harmless.
+
+Found two real, concrete bugs while cross-checking our sent `CSOEconItem`
+fields against the real schema:
+
+- **`item.set_level(1)` for everything.** TF2's real `items_game.txt` entry
+  for Ghastly Gibus explicitly requires `min_ilevel`/`max_ilevel` = `10`.
+  This also matches general TF2 convention: Unusual-quality items are
+  always level 10 regardless of the base item. **Fixed**: `BuildEconItem`
+  now sends level 10 for any item with a particle effect (Unusual), level 1
+  otherwise.
+- **`item.set_origin(0)`**, plausibly `k_EItemOriginInvalid` in Valve's
+  shared origin enum. `csgo_gc/gc_const_csgo.h` already has a named
+  constant for exactly this "locally-injected default item" scenario
+  (`ItemOriginBaseItem = 22`). **Fixed**: added the same constant
+  (`ItemOriginBaseItemTF2 = 22`) and use it instead of `0`.
+
+Not confirmed to be sufficient -- these are concrete, well-evidenced fixes
+(one backed directly by the real schema, one by established precedent
+elsewhere in this codebase), not a guarantee. If items still don't show up
+after this, the next step is watching TF2's own in-game console (not just
+`gc_log.txt`, which only shows our side) at the moment the backpack UI would
+normally populate, to see what `client.dll` itself reports.
+
 ## Known gaps / what to check on first real launch
 
 - **`GameProfile` interface strings are still guesses.** `g_profileTF2`
