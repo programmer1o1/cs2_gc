@@ -1,10 +1,15 @@
-# TF2 live GC hook (first pass, UNVERIFIED against a real TF2 client)
+# TF2 live GC hook
 
 This documents the `tf2_gc` target: a second, separate GC dylib that wires
 milestone 1's TF2 item-schema/inventory parser (`tf2_gc/`) into the same
-hook/threading/job-id plumbing `csgo_gc` uses for CS:GO/CS2. It has never
-been run against an actual TF2 process — see "Known gaps" below before
-relying on it.
+hook/threading/job-id plumbing `csgo_gc` uses for CS:GO/CS2.
+
+**Status (2026-07-21): confirmed working against a real TF2 client.** The
+hook attaches, the GCSDK handshake completes, and the injected backpack
+(hats + a diagnostic stock weapon) shows up in-game — see "Seventh real
+launch result" below for the bug that was blocking this and how it was
+found. Known remaining gap: equipping items isn't implemented yet (see
+"Known gaps").
 
 ## What it does
 
@@ -375,8 +380,23 @@ new-generation format), and set `message.set_owner(m_steamId)` in
 Purely additive to the shared proto file; CS:GO/CS2 never read or set the
 new field, so this shouldn't affect them.
 
-Not yet retested against a real TF2 client -- this is the first live test
-still pending for this specific fix.
+**Retested (2026-07-21): confirmed fixed.** Both the diagnostic Scattergun
+and the 5 hats now show up in the backpack in-game, and the "couldn't
+connect to item server" popup is gone. This was the real bug -- the earlier
+config/path/level/origin fixes were all real, necessary bugs too (config.cpp
+genuinely didn't recognize `"tf2"`, the schema/inventory path was genuinely
+wrong, level/origin were genuinely hardcoded incorrectly), but none of them
+were sufficient on their own because the SO cache was never reaching the
+local player's inventory at all until the `owner` field was added.
+
+Not yet working: equipping items (loadout slot assignment). `ClientGCTF2`
+only implements backpack population (`ClientHello`/`Welcome` and
+`RequestInventoryRefresh`); it doesn't handle whatever message TF2 sends for
+equipping (CS:GO's equivalent is `k_EMsgGCAdjustItemEquippedState` /
+`AdjustEquipSlots`, building `SOTypeEquipSlot` objects) at all yet. See
+`csgo_gc/inventory.cpp`'s `BuildCacheSubscription` for how CS:GO builds
+`CSOEconItemEquipped`/equip-slot SO objects as a reference for what TF2
+would need.
 
 ## Known gaps / what to check on first real launch
 
@@ -404,6 +424,11 @@ still pending for this specific fix.
   `tf` launcher target still builds on macOS in CI for consistency, but
   there's no real TF2 client left to hook there. Test on Windows or Linux
   (Linux got a 64-bit client/server executable in the same April 2024 update).
-- Never tested against a live TF2 client/GC connection. Compiles, links, and
-  the CS:GO/CS2 build was confirmed unaffected (see git history for this
-  change), but the actual hook attach + handshake round-trip is unverified.
+- **Equipping items is not implemented.** Backpack items display, but there's
+  no `AdjustEquipSlots`/`AdjustItemEquippedState`-equivalent handler and no
+  `SOTypeEquipSlot` objects are built, so nothing is wired up to actually
+  change what's equipped. This is the next feature to add.
+- Confirmed working against a live TF2 client/GC connection as of
+  2026-07-21 (see "Seventh real launch result" above) -- hook attach,
+  handshake, and backpack population all verified in-game, not just
+  compiled/linked.
