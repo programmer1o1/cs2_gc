@@ -39,7 +39,7 @@ jobs:
       run: |
         mkdir ${{ github.workspace }}/release
         cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -S ${{ github.workspace }} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DOUTDIR=${{ github.workspace }}/release
-        cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }} --target csgo cs2ds csgo_gc --parallel
+        cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }} --target csgo cs2ds csgo_gc tf tf2_gc --parallel
         cmake -B ${{ github.workspace }}/build_ds -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -S ${{ github.workspace }} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32 -DOUTDIR=${{ github.workspace }}/release
         cmake --build ${{ github.workspace }}/build_ds --config ${{ matrix.build_type }} --target srcds csgo_gc --parallel
 
@@ -48,7 +48,7 @@ jobs:
       run: |
         mkdir ${{ github.workspace }}/release
         cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -S ${{ github.workspace }} -DCMAKE_OSX_ARCHITECTURES=x86_64 -DFUNCHOOK_CPU=x86 -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DOUTDIR=${{ github.workspace }}/release
-        cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }} --target csgo csgo_gc --parallel
+        cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }} --target csgo csgo_gc tf tf2_gc --parallel
 
     # Use the Ninja generator on Windows: the Visual Studio generator ignores
     # CMAKE_CXX_COMPILER_LAUNCHER, so sccache only actually caches under Ninja.
@@ -63,7 +63,7 @@ jobs:
       run: |
         mkdir ${{ github.workspace }}/release
         cmake -G Ninja -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -S ${{ github.workspace }} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DOUTDIR=${{ github.workspace }}/release
-        cmake --build ${{ github.workspace }}/build --target csgo srcds csgo_gc
+        cmake --build ${{ github.workspace }}/build --target csgo srcds csgo_gc tf2_gc
 
     - if: matrix.os == 'windows-2022'
       name: Setup MSVC (x64)
@@ -75,7 +75,7 @@ jobs:
       name: Build Windows (x64)
       run: |
         cmake -G Ninja -B ${{ github.workspace }}/build_x64 -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -S ${{ github.workspace }} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DOUTDIR=${{ github.workspace }}/release
-        cmake --build ${{ github.workspace }}/build_x64 --target cs2 csgo_gc
+        cmake --build ${{ github.workspace }}/build_x64 --target cs2 csgo_gc tf2_gc
 
     - name: Package
       shell: bash
@@ -91,6 +91,9 @@ jobs:
         cp $GITHUB_WORKSPACE/examples/inventory.txt $GITHUB_WORKSPACE/release/csgo_gc/
         cp $GITHUB_WORKSPACE/examples/price_sheet.txt $GITHUB_WORKSPACE/release/csgo_gc/
         cp $GITHUB_WORKSPACE/examples/unusual_loot_lists.txt $GITHUB_WORKSPACE/release/csgo_gc/
+        mkdir -p $GITHUB_WORKSPACE/release/tf2_gc
+        cp $GITHUB_WORKSPACE/examples/tf2_items_game.txt $GITHUB_WORKSPACE/release/tf2_gc/
+        cp $GITHUB_WORKSPACE/examples/tf2_unusual_inventory.txt $GITHUB_WORKSPACE/release/tf2_gc/tf2_inventory.txt
 
     - name: Zip artifacts (Windows)
       if: runner.os == 'Windows'
