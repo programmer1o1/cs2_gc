@@ -39,6 +39,17 @@
 			"item_slot"	"head"
 			"can_be_unusual"	"1"
 		}
+
+		// Diagnostic entry: stock Scattergun (marked "baseitem" "1" in the
+		// real schema, guaranteed to be loaded by every TF2 client). If this
+		// shows up in-game while the hats above don't, that isolates the
+		// problem to something hat-specific rather than a general item
+		// schema/lookup issue. See docs/tf2_live_hook.md.
+		"13"
+		{
+			"name"		"Scattergun"
+			"item_slot"	"secondary"
+		}
 	}
 
 	// real defindex -> real internal particle system name (attribute 134,

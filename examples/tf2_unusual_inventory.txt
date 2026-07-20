@@ -11,4 +11,7 @@
 
 	// plain (non-Unusual) item for contrast
 	"Football Helmet"							"1"
+
+	// diagnostic: stock weapon every TF2 client definitely has loaded
+	"Scattergun"								"1"
 }

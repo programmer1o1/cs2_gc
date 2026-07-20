@@ -269,6 +269,58 @@ after this, the next step is watching TF2's own in-game console (not just
 `gc_log.txt`, which only shows our side) at the moment the backpack UI would
 normally populate, to see what `client.dll` itself reports.
 
+## Sixth real launch result (2026-07-21, level/origin fixes didn't change anything visible)
+
+Same exact wire pattern as before (6 items sent, same recurring refresh,
+same 4 unhandled messages) -- from our side nothing looked different, and
+the popup persisted. Went hunting for the exact popup text instead of
+continuing to assume: found it in `tf/resource/tf_english.txt` --
+`"NoGCNoItems" "LOADOUT NOT AVAILABLE - COULD NOT CONNECT TO ITEM SERVER"`.
+
+Identified the three previously-"UNKNOWN"/unhandled messages via the real
+`tf_gcmessages.proto`/`econ_gcmessages.proto` (from `ValveSoftware/source-sdk-2013`,
+found by numeric ID rather than guessing): `k_EMsgGCDataCenterPing_Update`
+(6528), `k_EMsgGC_TFClientInit` (6536, sent once after `ClientWelcome` with
+client version/language, no reply message exists in the proto), and
+`k_EMsgGCRespawnPostLoadoutChange` (1029, client -> GC -> game server). All
+three are one-way/fire-and-forget with no expected GC reply, ruling them out
+as the blocker.
+
+Then found the real client-side inventory source
+(`ValveSoftware/source-sdk-2013`'s `game/shared/econ/econ_item_inventory.cpp`,
+real C++, not decompiled) and traced the actual bulk-load path, which is
+different from the per-item `CPlayerInventory::SOCreated` callback we'd
+been staring at in IDA (that one only handles *incremental* updates after
+the initial load; for the initial `CMsgClientWelcome`-embedded SO cache, it
+does nothing). The real path is `CPlayerInventory::SOCacheSubscribed`,
+which iterates the SO cache's item type cache and calls `AddEconItem` for
+each item, then fires `SendItemSystemConnectedEvent()` (very likely what
+clears the "NoGCNoItems" state) -- but only once, for the local player's
+inventory.
+
+`AddEconItem` -> `FilloutItemFromEconItem` -> `CEconItemView::Init()`:
+```cpp
+m_iItemDefinitionIndex = iDefIndex;
+CEconItemDefinition *pData = GetStaticData();
+if ( !pData )
+{
+    // We've got an item that we don't have static data for.
+    return;   // m_bInitialized stays false
+}
+...
+m_bInitialized = true;
+```
+`IsValid()` is just `return m_bInitialized;`. So every item we send lives or
+dies on whether `GetStaticData()` (schema lookup by our `def_index`)
+succeeds client-side. This is as far as static source analysis can take it
+without live debugging -- next step is an empirical isolation test: added
+defindex `13` (stock Scattergun, `"baseitem" "1"` in the real schema,
+guaranteed loaded by every client) as a plain item alongside the 5 hats in
+`tf2_items_game.txt`/`tf2_unusual_inventory.txt`. If the Scattergun shows up
+in-game while the hats don't, the problem is hat-specific; if neither shows
+up, it's more fundamental (schema not loaded yet, wrong SO cache owner id,
+etc).
+
 ## Known gaps / what to check on first real launch
 
 - **`GameProfile` interface strings are still guesses.** `g_profileTF2`
