@@ -2728,18 +2728,6 @@ static bool InitializeSteamAPI(bool dedicated)
     }
 }
 
-static void ShutdownSteamAPI(bool dedicated)
-{
-    if (dedicated)
-    {
-        SteamGameServer_Shutdown();
-    }
-    else
-    {
-        SteamAPI_Shutdown();
-    }
-}
-
 static bool s_steamClientHooksInstalled = false;
 
 #ifdef _WIN32
@@ -3118,8 +3106,20 @@ void SteamHookInstall(bool dedicated)
             AppId::GetOverride());
     }
 
-    // decrement reference count
-    ShutdownSteamAPI(dedicated);
-
+    // Deliberately NOT calling ShutdownSteamAPI() here. steam_api64.dll's
+    // SteamAPI_Shutdown() unconditionally FreeLibrary()s the steamclient64.dll
+    // module handle it loaded (confirmed via disassembly of a real
+    // steam_api64.dll/SteamAPI_Shutdown). Windows LoadLibrary/FreeLibrary is
+    // refcounted, so this is harmless when something else (normally Steam's
+    // own overlay injection when it launches the game) holds another
+    // reference -- but if nothing else does (observed under Wine/CrossOver,
+    // where overlay injection often doesn't happen), this was the *only*
+    // reference, and Shutdown()'s FreeLibrary() actually unloaded
+    // steamclient64.dll before InstallSteamClientHooks() below could find it,
+    // producing "steamclient64.dll not loaded". Simply keeping our own
+    // reference alive (never shutting down) guarantees the module stays
+    // resident for the hook's lifetime; later legitimate SteamAPI_Init calls
+    // from the real engine just reuse the cached session Valve's own code
+    // already does internally (see docs/tf2_live_hook.md).
     InstallSteamClientHooks();
 }

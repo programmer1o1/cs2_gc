@@ -73,14 +73,51 @@ verified by building both targets and diffing warnings (identical).
 parameterized via `GC_MODULE_NAME` the same way, defaulting to `"csgo_gc"`.
 The new `tf` launcher target (`launcher/CMakeLists.txt`) sets it to `"tf2_gc"`.
 
+## Confirmed via IDA against a real TF2 install (2026-07-20)
+
+A first real launch attempt (Windows TF2 under CrossOver) hit
+`"steamclient64.dll not loaded — cannot install GC hooks"`. Loaded
+`tf_win64.exe`, `bin/x64/launcher.dll`, and `bin/x64/steam_api64.dll` into
+IDA to find the actual cause instead of guessing:
+
+- `tf_win64.exe`'s `WinMain` is a thin stub: it loads `bin\x64\launcher.dll`
+  and calls its exported `LauncherMain`, confirming `bin/x64/` (not a
+  CS2-style `win64/`) is correct, and that `tf.exe`/`tf_win64.exe` really are
+  TF2's own launcher executables (not a generic `hl2.exe`).
+- `launcher.dll`'s real `LauncherMain` takes **zero parameters** in this
+  build (Hex-Rays folds away unused args) — our shared `launcher_win.cpp`
+  passes it 5 (`bSecure, hInstance, hPrevInstance, lpCmdLine, nShowCmd`).
+  Harmless *for this build* since it never reads them, but worth noting if
+  a future TF2 update's `launcher.dll` does read args.
+- **Root cause of the actual error, confirmed by decompiling
+  `steam_api64.dll`:** `SteamAPI_Shutdown()` unconditionally calls
+  `FreeLibrary()` on the module handle it loaded for `steamclient64.dll`.
+  Windows `LoadLibrary`/`FreeLibrary` is refcounted, so this is harmless
+  when something else (normally Steam's own overlay injection when it
+  launches a game) already holds a reference — but under Wine/CrossOver,
+  where overlay injection frequently doesn't happen, our own probe call was
+  the *only* reference, so `ShutdownSteamAPI()`'s `FreeLibrary()` genuinely
+  unloaded `steamclient64.dll` right before `InstallSteamClientHooks()`
+  checked for it. **Fixed** by no longer calling `ShutdownSteamAPI()` in
+  `SteamHookInstall()` (applies to CS:GO/CS2 too — the bug wasn't
+  TF2-specific, just more likely to surface under Wine).
+- `launcher.dll` itself calls `SteamAPI_InitSafe()` (stricter than
+  `SteamAPI_Init()` — requires an extra internal flag), but only if
+  `GameOverlayRenderer.dll` isn't already loaded and `SteamGameId` isn't
+  already set in the environment — i.e. it skips its own Steam init
+  entirely when Steam already bootstrapped the process. Our code doesn't
+  replicate this check, but since we no longer tear down our own session,
+  this shouldn't matter in practice.
+
 ## Known gaps / what to check on first real launch
 
-- **`GameProfile` interface strings are guesses.** `g_profileTF2`
+- **`GameProfile` interface strings are still guesses.** `g_profileTF2`
   (`csgo_gc/game_profile.cpp`) reuses CS:GO's `GAMEEVENTSMANAGER002`/
   `VEngineClient014` interface version strings on the assumption TF2's
-  engine build is close enough (both Source 1, similar vintage). If hooking
-  silently fails to find these interfaces on launch, dump the actual
-  strings out of TF2's `engine.dylib`/`.so`/`.dll` and fix this struct.
+  engine build is close enough (both Source 1, similar vintage). Not yet
+  checked against `engine.dll` — if hooking attaches (fixed above) but the
+  engine-side features silently no-op, dump the actual interface strings
+  out of TF2's `engine.dll` next.
 - **`AppId::IsOriginal()` still hardcodes `== 730`** (CS:GO/CS2's shared
   appid). For TF2 (appid 440) this will simply always be false, which only
   gates some CS:GO-specific server-browser/stats spoofing paths in
