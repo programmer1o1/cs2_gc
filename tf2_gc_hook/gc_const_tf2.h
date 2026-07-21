@@ -16,13 +16,6 @@ constexpr uint32_t AttributeParticleEffectTF2 = 134;
 // Economy items are SO type 1 across every Valve GC game (CS:GO, TF2, Dota2).
 constexpr uint32_t SOTypeItemTF2 = 1;
 
-enum QualityTF2 : uint32_t
-{
-    QualityNormalTF2 = 0,
-    QualityUnusualTF2 = 3,
-    QualityUniqueTF2 = 4,
-};
-
 // CSOEconItem origin. csgo_gc/gc_const_csgo.h has the same named constant
 // (ItemOriginBaseItem = 22) for CS:GO's equivalent "locally-injected default
 // item" case; using 0 (plausibly k_EItemOriginInvalid in Valve's shared
