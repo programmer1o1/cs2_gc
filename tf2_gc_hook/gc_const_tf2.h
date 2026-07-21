@@ -15,19 +15,22 @@ constexpr uint32_t AttributeParticleEffectTF2 = 134;
 // CSOEconItemAttribute def_index for "is australium item" (attribute_class
 // "is_australium_item", stored_as_integer per the real schema -- confirmed
 // in a real items_game.txt's attributes block). Real Australium weapons are
-// the base weapon's own defindex carrying this attribute plus visual style
-// index 1 (see CSOEconItem.style), not a separate item.
+// just the base weapon's own defindex carrying this one attribute at Strange
+// quality -- not a separate item, and NOT driven by CSOEconItem.style (see
+// gc_client_tf2.cpp's BuildEconItem for why the style system doesn't apply
+// to these defindexes).
 constexpr uint32_t AttributeIsAustraliumItemTF2 = 2027;
-
-// CSOEconItem.style value that selects the built-in gold skin variant a
-// weapon's "Upgradeable" sibling declares at visuals.styles["1"] in the real
-// schema (e.g. w_rocketlauncher_gold) -- the same style index every
-// Australium-eligible weapon uses for its gold reskin.
-constexpr uint32_t StyleAustraliumGoldTF2 = 1;
 
 // Shared object type (type_id field in CMsgSOCacheSubscribed_SubscribedType).
 // Economy items are SO type 1 across every Valve GC game (CS:GO, TF2, Dota2).
 constexpr uint32_t SOTypeItemTF2 = 1;
+
+// CSOEconGameAccountClient SO type -- same value as csgo_gc/gc_const_csgo.h's
+// SOTypeGameAccountClient, a Valve-wide constant (see docs/tf2_live_hook.md).
+// Carries additional_backpack_slots; never sending this object at all left
+// the real client assuming whatever default backpack capacity it falls back
+// to, which a 300+ item injected backpack can exceed ("not enough space").
+constexpr uint32_t SOTypeGameAccountClientTF2 = 7;
 
 // CSOEconItem origin. csgo_gc/gc_const_csgo.h has the same named constant
 // (ItemOriginBaseItem = 22) for CS:GO's equivalent "locally-injected default

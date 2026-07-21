@@ -126,8 +126,15 @@ static void BuildEconItem(const InventoryEntryTF2 &entry, uint64_t itemId, uint3
 
     if (entry.isAustralium)
     {
-        item.set_style(StyleAustraliumGoldTF2);
-
+        // Deliberately NOT setting item.style here: the gold "styles" table
+        // (visuals.styles["1"]) only exists on each weapon's separate
+        // "Upgradeable ..." War Paint-base sibling in the real schema (e.g.
+        // defindex 205 for the Rocket Launcher), not on the base weapon
+        // itself (defindex 18) that Australium items actually use -- a real
+        // client has no styles table to index into on this defindex, so
+        // style=1 here is a no-op at best. The real gold reskin is driven
+        // entirely by the client's native weapon-skin code checking this
+        // attribute, independent of the item-style/War-Paint system.
         CSOEconItemAttribute *attr = item.add_attribute();
         attr->set_def_index(AttributeIsAustraliumItemTF2);
 
@@ -215,8 +222,19 @@ void ClientGCTF2::HandleMessage(uint32_t type, const void *data, uint32_t size)
 
     if (!messageRead.IsProtobuf())
     {
-        Platform::Print("ClientGCTF2::HandleMessage: unhandled struct message %s\n",
-            MessageName(messageRead.TypeUnmasked()));
+        // k_EMsgGCDelete is a raw struct message (just a uint64 item id),
+        // same as CS:GO's csgo_gc/gc_client.cpp handles it -- not a protobuf.
+        switch (messageRead.TypeUnmasked())
+        {
+        case k_EMsgGCDelete:
+            OnDeleteItem(messageRead);
+            break;
+
+        default:
+            Platform::Print("ClientGCTF2::HandleMessage: unhandled struct message %s\n",
+                MessageName(messageRead.TypeUnmasked()));
+            break;
+        }
         return;
     }
 
@@ -363,6 +381,49 @@ bool ClientGCTF2::EquipItem(uint64_t itemId, uint32_t classId, uint32_t slotId, 
     return true;
 }
 
+void ClientGCTF2::OnDeleteItem(GCMessageRead &messageRead)
+{
+    // Raw struct message: just a uint64 item id, same as csgo_gc/gc_client.cpp's
+    // DeleteItem/CS:GO's k_EMsgGCDelete handling -- no protobuf body.
+    uint64_t itemId = messageRead.ReadUint64();
+    if (!messageRead.IsValid())
+    {
+        Platform::Print("ClientGCTF2: parsing CMsgGCDelete failed, ignoring\n");
+        return;
+    }
+
+    auto it = m_liveItems.find(itemId);
+    if (it == m_liveItems.end())
+    {
+        Platform::Print("ClientGCTF2: delete request for unknown item=%llu, ignoring\n",
+            (unsigned long long)itemId);
+        return;
+    }
+
+    // Mirrors csgo_gc/inventory.cpp's DestroyItem: the destroy notification
+    // only needs the item's id, not its full contents.
+    CSOEconItem destroyedItem;
+    destroyedItem.set_id(itemId);
+
+    CMsgSOSingleObject destroyed;
+    destroyed.set_version(InventoryVersionTF2);
+    destroyed.mutable_owner_soid()->set_type(SoIdTypeSteamId);
+    destroyed.mutable_owner_soid()->set_id(m_steamId);
+    destroyed.set_owner(m_steamId);
+    destroyed.set_type_id(SOTypeItemTF2);
+    destroyed.set_object_data(destroyedItem.SerializeAsString());
+
+    m_liveItems.erase(it);
+
+    Platform::Print("ClientGCTF2: deleted item=%llu\n", (unsigned long long)itemId);
+
+    // Without erasing from m_liveItems above, the item would just come back
+    // on the next SO cache rebuild -- that's the "delete doesn't work"
+    // symptom. true = also tell the game server, same as every other
+    // destroy path (equip/unequip changes the server needs to know about).
+    SendMessageToGame(/*sendToGameServer=*/true, k_ESOMsg_Destroy, destroyed);
+}
+
 void ClientGCTF2::OnAdjustItemEquippedState(GCMessageRead &messageRead)
 {
     CMsgAdjustItemEquippedState message;
@@ -424,6 +485,21 @@ void ClientGCTF2::BuildBackpackSOCache(CMsgSOCacheSubscribed &message, bool equi
 
         itemObject->add_object_data(SerializeEconItemForWire(pair.second));
     }
+
+    // Without this SO object, the real client falls back to whatever default
+    // backpack capacity it assumes for the account and starts refusing to
+    // place items ("not enough backpack space") once our injected backpack
+    // exceeds it. csgo_gc/inventory.cpp sends this same SO type (7, a
+    // Valve-wide constant per docs/tf2_live_hook.md, not CS:GO-specific) for
+    // the equivalent CS:GO concept; additional_backpack_slots is a generic
+    // shared-proto field (protobufs/base_gcmessages.proto), so reuse it here
+    // set generously high rather than guessing TF2's exact base slot count.
+    CSOEconGameAccountClient accountClient;
+    accountClient.set_additional_backpack_slots(1000);
+
+    CMsgSOCacheSubscribed_SubscribedType *accountObject = message.add_objects();
+    accountObject->set_type_id(SOTypeGameAccountClientTF2);
+    accountObject->add_object_data(accountClient.SerializeAsString());
 }
 
 void ClientGCTF2::OnClientHello(GCMessageRead &messageRead)

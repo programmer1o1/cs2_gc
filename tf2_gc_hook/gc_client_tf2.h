@@ -50,6 +50,7 @@ private:
     void OnClientHello(GCMessageRead &messageRead);
     void OnRequestInventoryRefresh();
     void OnAdjustItemEquippedState(GCMessageRead &messageRead);
+    void OnDeleteItem(GCMessageRead &messageRead);
 
     // equippedOnly mirrors csgo_gc/inventory.cpp's BuildCacheSubscription:
     // the full backpack goes to the game client (OnClientHello/refresh), but
