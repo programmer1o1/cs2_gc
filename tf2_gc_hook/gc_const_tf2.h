@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 
 // TF2-specific GC constants. See docs/tf2_live_hook.md for how each of these
@@ -64,10 +65,26 @@ constexpr uint32_t SlotUnequipTF2 = 0xffff;
 // CMsgSOCacheSubscribed/CMsgSOMultipleObjects.version -- csgo_gc/inventory.cpp
 // sets this same fixed nonzero constant (InventoryVersion) on every SO cache
 // message it sends (BuildCacheSubscription, AddToMultipleObjects,
-// ToSingleObject). We never set it at all here, which is a likely reason
-// equip updates (CMsgSOMultipleObjects) got silently ignored client-side
-// even though the message demonstrably arrived (no parse/validation
-// errors): GCSDK's shared object cache tracks a version per cache and may
-// drop updates that don't look newer than what it already has, and an
-// entirely absent/zero version is the least "new" a message can look.
+// ToSingleObject), which that file's own "mikkotodo actual versioning"
+// comment already flags as an unfinished placeholder. Confirmed live via
+// gc_log.txt that reusing one fixed value here has a real, visible cost for
+// TF2: GCSDK's shared object cache tracks a version per cache and ignores
+// updates that don't look newer than what it already has, so every message
+// after the very first one that happens to carry this exact version --
+// including every later equip-switch CMsgSOMultipleObjects -- looked like a
+// no-op duplicate and was silently dropped client-side, regardless of its
+// actual contents. NextInventoryVersionTF2() replaces the plain constant
+// everywhere it's used (see gc_client_tf2.cpp) with a value that's
+// guaranteed to increase on every single SO cache message this process
+// sends, starting from this same constant for continuity.
 constexpr uint64_t InventoryVersionTF2 = 7523377975160828514;
+
+inline uint64_t NextInventoryVersionTF2()
+{
+    // atomic: ClientGCTF2's event queue is filled from the game's own thread(s)
+    // but drained/handled on SharedGC's dedicated worker thread (gc_shared.h),
+    // so this is likely only ever called from one thread in practice -- but
+    // it's essentially free to make that guaranteed rather than assumed.
+    static std::atomic<uint64_t> s_version{ InventoryVersionTF2 };
+    return s_version.fetch_add(1, std::memory_order_relaxed) + 1;
+}
