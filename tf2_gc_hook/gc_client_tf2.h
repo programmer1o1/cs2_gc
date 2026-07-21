@@ -27,11 +27,11 @@ class MessageLite;
 // same wire protocol csgo_gc already speaks for CS:GO/CS2 (see docs/tf2_live_hook.md).
 // Confirmed working against a live TF2 client (backpack display + equipping).
 //
-// Scope: backpack display + equipping. No crafting, trading, case opening
-// (that's k_EMsgGCUnlockCrate's ancestor message, not ported here), or
-// in-match cosmetic visibility to other players/servers
-// (NetworkingClientTF2/NetworkingServerTF2 are no-ops for that reason, so
-// equips only apply for this local backpack view, not in an actual game).
+// Also pushes equipped items to the local game server via ServerGCTF2 (see
+// HandleSOCacheRequest/OnAdjustItemEquippedState's sendToGameServer=true),
+// so loadout changes actually apply in-game/on the loadout screen, not just
+// in the backpack UI. Scope: still no crafting, trading, or case opening
+// (that's k_EMsgGCUnlockCrate's ancestor message, not ported here).
 class ClientGCTF2 final : public SharedGC
 {
 public:
@@ -50,7 +50,13 @@ private:
     void OnClientHello(GCMessageRead &messageRead);
     void OnRequestInventoryRefresh();
     void OnAdjustItemEquippedState(GCMessageRead &messageRead);
-    void BuildBackpackSOCache(CMsgSOCacheSubscribed &message);
+
+    // equippedOnly mirrors csgo_gc/inventory.cpp's BuildCacheSubscription:
+    // the full backpack goes to the game client (OnClientHello/refresh), but
+    // only currently-equipped items get sent to the game server (matches
+    // ServerGCTF2's RemoveUnequippedItems expectation and keeps the P2P
+    // payload small).
+    void BuildBackpackSOCache(CMsgSOCacheSubscribed &message, bool equippedOnly = false);
 
     // Mirrors csgo_gc/inventory.cpp's Inventory::EquipItem/UnequipItem, minus
     // the "default item" (base weapon with no real CSOEconItem) handling our
@@ -59,7 +65,7 @@ private:
     void UnequipItem(uint32_t classId, uint32_t slotId, CMsgSOMultipleObjects &update);
     void AddToMultipleObjects(CMsgSOMultipleObjects &message, uint32_t typeId, const CSOEconItem &item);
 
-    void SendMessageToGame(uint32_t type, const google::protobuf::MessageLite &message);
+    void SendMessageToGame(bool sendToGameServer, uint32_t type, const google::protobuf::MessageLite &message);
 
     const uint64_t m_steamId;
     std::unique_ptr<ItemSchemaTF2> m_schema;

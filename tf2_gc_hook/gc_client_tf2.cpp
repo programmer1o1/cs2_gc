@@ -200,10 +200,21 @@ void ClientGCTF2::HandleMessage(uint32_t type, const void *data, uint32_t size)
 
 void ClientGCTF2::HandleSOCacheRequest()
 {
-    // Posted by steam_hook.cpp when connecting to a TF2 game server so the
-    // server can validate/mirror your backpack. NetworkingClientTF2 can't
-    // relay it anywhere yet (see its header) so there's nothing useful to do.
-    Platform::Print("ClientGCTF2: SOCacheRequest ignored (game-server relay not implemented)\n");
+    // Posted by steam_hook.cpp when connecting to a TF2 game server (including
+    // our own listen server on a map/round start) so the server's ServerGCTF2
+    // can relay our equipped items to the game server's client.dll -- without
+    // this, the server never learns our loadout and the game falls back to
+    // default items (see docs/tf2_live_hook.md, the "lost connection to the
+    // item server" popup). Only equipped items are sent, matching
+    // ServerGCTF2::RemoveUnequippedItemsTF2's expectations.
+    CMsgSOCacheSubscribed message;
+    BuildBackpackSOCache(message, /*equippedOnly=*/true);
+
+    int itemCount = message.objects_size() ? message.objects(0).object_data_size() : 0;
+    Platform::Print("ClientGCTF2: HandleSOCacheRequest, sending %d equipped items to game server\n", itemCount);
+
+    GCMessageWrite messageWrite{ k_ESOMsg_CacheSubscribed, message };
+    PostToHost(HostEvent::NetMessage, 0, messageWrite.Data(), messageWrite.Size());
 }
 
 void ClientGCTF2::OnRequestInventoryRefresh()
@@ -214,7 +225,7 @@ void ClientGCTF2::OnRequestInventoryRefresh()
     int itemCount = message.objects_size() ? message.objects(0).object_data_size() : 0;
     Platform::Print("ClientGCTF2: OnRequestInventoryRefresh, resending %d backpack items\n", itemCount);
 
-    SendMessageToGame(k_ESOMsg_CacheSubscribed, message);
+    SendMessageToGame(/*sendToGameServer=*/false, k_ESOMsg_CacheSubscribed, message);
 }
 
 void ClientGCTF2::AddToMultipleObjects(CMsgSOMultipleObjects &message, uint32_t typeId, const CSOEconItem &item)
@@ -319,10 +330,13 @@ void ClientGCTF2::OnAdjustItemEquippedState(GCMessageRead &messageRead)
     Platform::Print("ClientGCTF2: equip item=%llu class=%u slot=%u\n",
         (unsigned long long)message.item_id(), message.new_class(), message.new_slot());
 
-    SendMessageToGame(k_ESOMsg_UpdateMultiple, update);
+    // Also tell the game server (true), same as csgo_gc/gc_client.cpp's
+    // AdjustItemEquippedState -- otherwise the equip change never reaches
+    // ServerGCTF2, so it never gets applied on the loadout screen/in-game.
+    SendMessageToGame(/*sendToGameServer=*/true, k_ESOMsg_UpdateMultiple, update);
 }
 
-void ClientGCTF2::BuildBackpackSOCache(CMsgSOCacheSubscribed &message)
+void ClientGCTF2::BuildBackpackSOCache(CMsgSOCacheSubscribed &message, bool equippedOnly)
 {
     // "owner" is the original GCSDK field (plain steam id); confirmed against
     // the real GCSDK client source (nillerusr/source-engine) that TF2's older
@@ -343,6 +357,11 @@ void ClientGCTF2::BuildBackpackSOCache(CMsgSOCacheSubscribed &message)
     // reset every item to unequipped on every resend.
     for (const auto &pair : m_liveItems)
     {
+        if (equippedOnly && !pair.second.equipped_state_size())
+        {
+            continue;
+        }
+
         itemObject->add_object_data(pair.second.SerializeAsString());
     }
 }
@@ -367,11 +386,17 @@ void ClientGCTF2::OnClientHello(GCMessageRead &messageRead)
     int itemCount = welcome.outofdate_subscribed_caches(0).objects(0).object_data_size();
     Platform::Print("ClientGCTF2: sending welcome with %d backpack items\n", itemCount);
 
-    SendMessageToGame(k_EMsgGCClientWelcome, welcome);
+    SendMessageToGame(/*sendToGameServer=*/false, k_EMsgGCClientWelcome, welcome);
 }
 
-void ClientGCTF2::SendMessageToGame(uint32_t type, const google::protobuf::MessageLite &message)
+void ClientGCTF2::SendMessageToGame(bool sendToGameServer, uint32_t type, const google::protobuf::MessageLite &message)
 {
     GCMessageWrite messageWrite{ type, message };
+
+    if (sendToGameServer)
+    {
+        PostToHost(HostEvent::NetMessage, 0, messageWrite.Data(), messageWrite.Size());
+    }
+
     PostToHost(HostEvent::Message, messageWrite.TypeMasked(), messageWrite.Data(), messageWrite.Size());
 }

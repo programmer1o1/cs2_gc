@@ -8,12 +8,18 @@ project(tf2_gc)
 # docs/tf2_live_hook.md). NONE of csgo_gc's CS:GO-specific business logic
 # (gc_client.cpp, gc_server.cpp, inventory.cpp, item_schema.cpp,
 # case_opening.cpp, graffiti.cpp, networking_client.cpp/networking_server.cpp)
-# is reused -- this target provides its own TF2 equivalents instead.
+# is reused -- this target provides its own TF2 equivalents instead
+# (gc_client_tf2.cpp, gc_server_tf2.cpp, networking_client_tf2.cpp,
+# networking_server_tf2.cpp), reimplementing the same P2P SO-cache relay
+# CS:GO's originals do since that logic is game-agnostic at the wire level.
 add_library(tf2_gc SHARED
     gc_client_tf2.cpp
     gc_const_tf2.h
+    gc_server_tf2.cpp
     gc_server_tf2.h
+    networking_client_tf2.cpp
     networking_client_tf2.h
+    networking_server_tf2.cpp
     networking_server_tf2.h
 
     # milestone 1's standalone TF2 schema/inventory parser (see tf2_gc/)

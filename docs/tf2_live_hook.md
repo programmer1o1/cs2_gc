@@ -452,3 +452,75 @@ would need.
   handshake, and backpack population all verified in-game, not just
   compiled/linked. Equipping was added afterward and is not yet verified
   live.
+
+## Server-side GC (`ServerGCTF2`/`NetworkingClientTF2`/`NetworkingServerTF2`)
+
+Backpack display and client-side equip *processing* worked (the SO cache
+`owner` fix above), but equipped items still didn't show up in-game or
+survive reopening the loadout screen. In-game, pressing `M` revealed the
+real cause: `TF_ServerNoSteamConn_Explanation` ("The server you are playing
+on has lost connection to the item server. As a result, your loadout will
+not be available on this server.") -- the exact same class of problem
+CS:GO's `ServerGC` exists to solve, and one this project had never
+implemented for TF2 at all (`ServerGCTF2`, `NetworkingClientTF2`,
+`NetworkingServerTF2` were all no-op stubs up to this point).
+
+Investigation of `csgo_gc/steam_hook.cpp` showed that essentially all of the
+plumbing needed is *already* game-agnostic: `SteamGameCoordinatorProxy`,
+`GCWrapper`, the `Hk_SteamAPI_RunCallbacks`/`Hk_SteamGameServer_RunCallbacks`
+event-dispatch loops (including the listen-server-specific shortcut that
+delivers `HostEvent::NetMessage` straight to `s_serverGC` in-process instead
+of over P2P when both a client and server GC exist in the same process --
+exactly our case for offline/practice play), and the `BeginAuthSession`/
+`EndAuthSession` hooks that call `NetworkingServer::ClientConnected`/
+`ClientDisconnected` are all selected purely via the `ActiveClientGC`/
+`ActiveServerGC`/`ActiveNetworkingClient`/`ActiveNetworkingServer` type
+aliases in `gc_active.h`/`networking_active.h`. None of that needed to
+change. Likewise the message/protobuf types involved
+(`k_EMsgGCServerHello`, `k_EMsgGCServerWelcome`, `CMsgClientWelcome`,
+`k_ESOMsg_Create/Update/Destroy/CacheSubscribed/UpdateMultiple`,
+`CMsgSOSingleObject`/`CMsgSOCacheSubscribed`/`CMsgSOMultipleObjects`,
+`CSOEconItem`/`equipped_state`, `SoIdTypeSteamId`) are all defined in the
+shared `gcsystemmsgs`/`base_gcmessages`/`gcsdk_gcmessages` protos, not
+anything CS:GO-specific -- confirmed by grepping for where each constant is
+declared.
+
+What actually needed writing (mirroring `csgo_gc/gc_server.cpp`,
+`networking_client.cpp`, `networking_server.cpp` almost verbatim, since the
+P2P relay logic itself is also game-agnostic):
+
+- **`NetworkingClientTF2`** (`tf2_gc_hook/networking_client_tf2.h/.cpp`):
+  real `ISteamNetworkingMessages`-based P2P client, identical to CS:GO's
+  `NetworkingClient` except templated to `ClientGCTF2`.
+- **`NetworkingServerTF2`** (`tf2_gc_hook/networking_server_tf2.h/.cpp`):
+  real P2P server side, tracks connected clients via `SteamGameServerNetworkingMessages()`.
+  This one has zero CS:GO-specific surface at all in the original either.
+- **`ServerGCTF2`** (`tf2_gc_hook/gc_server_tf2.h/.cpp`): handles
+  `k_EMsgGCServerHello` by sending a bare `k_EMsgGCServerWelcome` (no
+  CS:GO-specific `CMsgCStrike15Welcome` payload -- unverified whether TF2's
+  server expects anything in `game_data`, but the welcome's only observed
+  purpose is acknowledging the connection) and immediately requesting the
+  client GC's SO cache (same "proactive push" fallback CS:GO uses for
+  modern CS2, since we have no confirmation TF2 sends a
+  `Server2GCClientValidate`-equivalent per-client validate message).
+  `HandleNetMessage` validates incoming SO cache messages'
+  `owner_soid`/steam id match, strips unequipped items
+  (`RemoveUnequippedItemsTF2`), enforces `GetConfig().MaxServerItems()`, and
+  forwards to the game server's own GCSDK client via
+  `PostToHost(HostEvent::Message, ...)`. Dropped from the CS:GO original:
+  `Server2GCClientValidate` handling, kill-count/music-kit-MVP tracking
+  (CS:GO gameplay concepts with no TF2 equivalent).
+- **`ClientGCTF2::HandleSOCacheRequest`** now actually builds an
+  equipped-items-only SO cache (`BuildBackpackSOCache(message,
+  equippedOnly=true)`) and sends it via `PostToHost(HostEvent::NetMessage, ...)`
+  instead of logging "ignored". `OnAdjustItemEquippedState` now also relays
+  the equip change to the game server (`SendMessageToGame(sendToGameServer=true,
+  ...)`), not just back to the local game client -- otherwise equip changes
+  would show in the backpack UI but never reach `ServerGCTF2` to get applied.
+
+Verified: `tf2_gc` and `csgo_gc` both build clean (no warnings from the new
+code) via a local CMake configure/build. **Not yet verified against a real
+TF2 client/listen server** -- next step is another live retest to confirm
+`ServerGCTF2` actually receives `k_EMsgGCServerHello`, the SO cache reaches
+the game server, and equipped items finally show up in-game and persist on
+the loadout screen.
