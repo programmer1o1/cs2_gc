@@ -113,13 +113,15 @@ static void BuildEconItem(const InventoryEntryTF2 &entry, uint64_t itemId, uint3
         CSOEconItemAttribute *attr = item.add_attribute();
         attr->set_def_index(AttributeParticleEffectTF2);
 
-        // attribute wire format stores floats as their raw bit pattern in
-        // the generic uint32 value field, same convention CS:GO's paint kit
-        // attributes use (see ItemSchema::SetAttributeFloat).
+        // Real clients read typed attribute values from value_bytes (a raw
+        // little-endian buffer), not the legacy plain-uint32 value field --
+        // confirmed by csgo_gc/item_schema.cpp's SetAttributeFloat, which is
+        // the same convention already verified working against a real
+        // client for CS:GO's paint kit attributes. "Attach particle effect"
+        // is a float-typed attribute (the effect index stored as a float),
+        // so encode it the same way.
         float particleValue = static_cast<float>(entry.particleId);
-        uint32_t bits;
-        memcpy(&bits, &particleValue, sizeof(bits));
-        attr->set_value(bits);
+        attr->set_value_bytes(&particleValue, sizeof(particleValue));
     }
 }
 
