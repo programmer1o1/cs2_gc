@@ -12,6 +12,19 @@
 // for e.g. paint kit attributes (see ItemSchema::AttributeFloat).
 constexpr uint32_t AttributeParticleEffectTF2 = 134;
 
+// CSOEconItemAttribute def_index for "is australium item" (attribute_class
+// "is_australium_item", stored_as_integer per the real schema -- confirmed
+// in a real items_game.txt's attributes block). Real Australium weapons are
+// the base weapon's own defindex carrying this attribute plus visual style
+// index 1 (see CSOEconItem.style), not a separate item.
+constexpr uint32_t AttributeIsAustraliumItemTF2 = 2027;
+
+// CSOEconItem.style value that selects the built-in gold skin variant a
+// weapon's "Upgradeable" sibling declares at visuals.styles["1"] in the real
+// schema (e.g. w_rocketlauncher_gold) -- the same style index every
+// Australium-eligible weapon uses for its gold reskin.
+constexpr uint32_t StyleAustraliumGoldTF2 = 1;
+
 // Shared object type (type_id field in CMsgSOCacheSubscribed_SubscribedType).
 // Economy items are SO type 1 across every Valve GC game (CS:GO, TF2, Dota2).
 constexpr uint32_t SOTypeItemTF2 = 1;

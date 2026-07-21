@@ -1,38 +1,351 @@
-// Minimal hand-written subset of TF2's items_game.txt for the tf2_gc schema
-// parser. Def indexes and particle IDs below are verified against a real
-// TF2 install's tf/scripts/items/items_game.txt (2026-07-20) -- the first
-// version of this file used fabricated/hallucinated numbers that didn't
-// exist in the real schema, which is why a live test's backpack items were
-// silently discarded by the client (unrecognized def_index). See
-// docs/tf2_live_hook.md.
+// Extended subset of TF2's items_game.txt for the tf2_gc schema parser.
+// Def indexes, item slots, and particle IDs below are all pulled directly
+// from a real TF2 install's tf/scripts/items/items_game.txt (2026-07-21) via
+// a KeyValues parser + tf_english.txt localization lookup, not hand-typed --
+// the first version of this file used fabricated/hallucinated numbers that
+// didn't exist in the real schema, which silently broke backpack display
+// (see docs/tf2_live_hook.md), so every entry here is independently verified
+// against the real schema rather than recalled from memory.
+//
+// Includes every non-cosmetic-skin weapon each class can use (stock +
+// unlocks; War Paint/"Upgradeable" base items and per-skin War Paint variants
+// excluded -- those aren't distinct obtainable weapons, just reskin bases),
+// a couple of Unusual-eligible hats, the Golden Frying Pan (defindex 1071,
+// a distinct all-class item, not an attribute-driven reskin), and Australium
+// weapons. Real Australium items are NOT separate defindexes: they're the
+// same base weapon defindex carrying attribute 2027 ("is_australium_item")
+// plus visual style index 1 (the item's built-in gold skin) -- confirmed via
+// the real schema's "make_australium" random_attribute_template and each
+// base weapon's "Upgradeable" sibling's style-1 image_inventory path ending
+// in "_gold". tf2_gc_hook parses this as an "Australium <ItemName>" prefix
+// in the inventory file (see gc_client_tf2.cpp / inventory.cpp), same idea
+// as the "[effect]ItemName" bracket notation for Unusuals.
 "items_game"
 {
 	"items"
 	{
+		"0"
+		{
+			"name"		"Bat"
+			"item_slot"	"melee"
+		}
+
+		"1"
+		{
+			"name"		"Bottle"
+			"item_slot"	"melee"
+		}
+
+		"2"
+		{
+			"name"		"Fire Axe"
+			"item_slot"	"melee"
+		}
+
+		"3"
+		{
+			"name"		"Kukri"
+			"item_slot"	"melee"
+		}
+
+		"4"
+		{
+			"name"		"Knife"
+			"item_slot"	"melee"
+		}
+
+		"5"
+		{
+			"name"		"Fists"
+			"item_slot"	"melee"
+		}
+
+		"6"
+		{
+			"name"		"Shovel"
+			"item_slot"	"melee"
+		}
+
+		"7"
+		{
+			"name"		"Wrench"
+			"item_slot"	"melee"
+		}
+
+		"8"
+		{
+			"name"		"Bonesaw"
+			"item_slot"	"melee"
+		}
+
+		"9"
+		{
+			"name"		"Shotgun (Engineer)"
+			"item_slot"	"primary"
+		}
+
+		"10"
+		{
+			"name"		"Shotgun (Soldier)"
+			"item_slot"	"secondary"
+		}
+
+		"11"
+		{
+			"name"		"Shotgun (Heavy)"
+			"item_slot"	"secondary"
+		}
+
+		"12"
+		{
+			"name"		"Shotgun (Pyro)"
+			"item_slot"	"secondary"
+		}
+
+		"13"
+		{
+			"name"		"Scattergun"
+			"item_slot"	"primary"
+		}
+
+		"14"
+		{
+			"name"		"Sniper Rifle"
+			"item_slot"	"primary"
+		}
+
+		"15"
+		{
+			"name"		"Minigun"
+			"item_slot"	"primary"
+		}
+
+		"16"
+		{
+			"name"		"SMG"
+			"item_slot"	"secondary"
+		}
+
+		"17"
+		{
+			"name"		"Syringe Gun"
+			"item_slot"	"primary"
+		}
+
+		"18"
+		{
+			"name"		"Rocket Launcher"
+			"item_slot"	"primary"
+		}
+
+		"19"
+		{
+			"name"		"Grenade Launcher"
+			"item_slot"	"primary"
+		}
+
+		"20"
+		{
+			"name"		"Stickybomb Launcher"
+			"item_slot"	"secondary"
+		}
+
+		"21"
+		{
+			"name"		"Flame Thrower"
+			"item_slot"	"primary"
+		}
+
+		"22"
+		{
+			"name"		"Pistol (Engineer)"
+			"item_slot"	"secondary"
+		}
+
+		"23"
+		{
+			"name"		"Pistol (Scout)"
+			"item_slot"	"secondary"
+		}
+
+		"24"
+		{
+			"name"		"Revolver"
+			"item_slot"	"secondary"
+		}
+
+		"25"
+		{
+			"name"		"Construction PDA"
+			"item_slot"	"pda"
+		}
+
+		"26"
+		{
+			"name"		"Destruction PDA"
+			"item_slot"	"pda2"
+		}
+
+		"27"
+		{
+			"name"		"Disguise Kit"
+			"item_slot"	"pda"
+		}
+
+		"28"
+		{
+			"name"		"PDA"
+			"item_slot"	"building"
+		}
+
+		"29"
+		{
+			"name"		"Medi Gun"
+			"item_slot"	"secondary"
+		}
+
+		"30"
+		{
+			"name"		"Invis Watch"
+			"item_slot"	"pda2"
+		}
+
+		"35"
+		{
+			"name"		"Kritzkrieg"
+			"item_slot"	"secondary"
+		}
+
+		"36"
+		{
+			"name"		"Blutsauger"
+			"item_slot"	"primary"
+		}
+
+		"37"
+		{
+			"name"		"Übersaw"
+			"item_slot"	"melee"
+		}
+
+		"38"
+		{
+			"name"		"Axtinguisher"
+			"item_slot"	"melee"
+		}
+
+		"39"
+		{
+			"name"		"Flare Gun"
+			"item_slot"	"secondary"
+		}
+
+		"40"
+		{
+			"name"		"Backburner"
+			"item_slot"	"primary"
+		}
+
+		"41"
+		{
+			"name"		"Natascha"
+			"item_slot"	"primary"
+		}
+
+		"42"
+		{
+			"name"		"Sandvich"
+			"item_slot"	"secondary"
+		}
+
+		"43"
+		{
+			"name"		"Killing Gloves of Boxing"
+			"item_slot"	"melee"
+		}
+
+		"44"
+		{
+			"name"		"Sandman"
+			"item_slot"	"melee"
+		}
+
+		"45"
+		{
+			"name"		"Force-a-Nature"
+			"item_slot"	"primary"
+		}
+
+		"46"
+		{
+			"name"		"Bonk! Atomic Punch"
+			"item_slot"	"secondary"
+		}
+
 		"49"
 		{
 			"name"		"Football Helmet"
 			"item_slot"	"head"
 			"can_be_unusual"	"1"
 		}
+
 		"50"
 		{
 			"name"		"Prussian Pickelhaube"
 			"item_slot"	"head"
 			"can_be_unusual"	"1"
 		}
+
 		"51"
 		{
 			"name"		"Pyro's Beanie"
 			"item_slot"	"head"
 			"can_be_unusual"	"1"
 		}
+
 		"52"
 		{
 			"name"		"Batter's Helmet"
 			"item_slot"	"head"
 			"can_be_unusual"	"1"
 		}
+
+		"56"
+		{
+			"name"		"Huntsman"
+			"item_slot"	"primary"
+		}
+
+		"57"
+		{
+			"name"		"Razorback"
+			"item_slot"	"secondary"
+		}
+
+		"58"
+		{
+			"name"		"Jarate"
+			"item_slot"	"secondary"
+		}
+
+		"59"
+		{
+			"name"		"Dead Ringer"
+			"item_slot"	"pda2"
+		}
+
+		"60"
+		{
+			"name"		"Cloak and Dagger"
+			"item_slot"	"pda2"
+		}
+
+		"61"
+		{
+			"name"		"Ambassador"
+			"item_slot"	"secondary"
+		}
+
 		"116"
 		{
 			"name"		"Ghastly Gibus"
@@ -40,15 +353,1668 @@
 			"can_be_unusual"	"1"
 		}
 
-		// Diagnostic entry: stock Scattergun (marked "baseitem" "1" in the
-		// real schema, guaranteed to be loaded by every TF2 client). If this
-		// shows up in-game while the hats above don't, that isolates the
-		// problem to something hat-specific rather than a general item
-		// schema/lookup issue. See docs/tf2_live_hook.md.
-		"13"
+		"127"
 		{
-			"name"		"Scattergun"
+			"name"		"Direct Hit"
+			"item_slot"	"primary"
+		}
+
+		"128"
+		{
+			"name"		"Equalizer"
+			"item_slot"	"melee"
+		}
+
+		"129"
+		{
+			"name"		"Buff Banner"
 			"item_slot"	"secondary"
+		}
+
+		"130"
+		{
+			"name"		"Scottish Resistance"
+			"item_slot"	"secondary"
+		}
+
+		"131"
+		{
+			"name"		"Chargin' Targe"
+			"item_slot"	"secondary"
+		}
+
+		"132"
+		{
+			"name"		"Eyelander"
+			"item_slot"	"melee"
+		}
+
+		"133"
+		{
+			"name"		"Gunboats"
+			"item_slot"	"secondary"
+		}
+
+		"140"
+		{
+			"name"		"Wrangler"
+			"item_slot"	"secondary"
+		}
+
+		"141"
+		{
+			"name"		"Frontier Justice"
+			"item_slot"	"primary"
+		}
+
+		"142"
+		{
+			"name"		"Gunslinger"
+			"item_slot"	"melee"
+		}
+
+		"153"
+		{
+			"name"		"Homewrecker"
+			"item_slot"	"melee"
+		}
+
+		"154"
+		{
+			"name"		"Pain Train"
+			"item_slot"	"melee"
+		}
+
+		"155"
+		{
+			"name"		"Southern Hospitality"
+			"item_slot"	"melee"
+		}
+
+		"159"
+		{
+			"name"		"Dalokohs Bar"
+			"item_slot"	"secondary"
+		}
+
+		"160"
+		{
+			"name"		"Lugermorph"
+			"item_slot"	"secondary"
+		}
+
+		"161"
+		{
+			"name"		"Big Kill"
+			"item_slot"	"secondary"
+		}
+
+		"162"
+		{
+			"name"		"Max's Severed Head"
+			"item_slot"	"head"
+			"can_be_unusual"	"1"
+		}
+
+		"163"
+		{
+			"name"		"Crit-a-Cola"
+			"item_slot"	"secondary"
+		}
+
+		"169"
+		{
+			"name"		"Golden Wrench"
+			"item_slot"	"melee"
+		}
+
+		"171"
+		{
+			"name"		"Tribalman's Shiv"
+			"item_slot"	"melee"
+		}
+
+		"172"
+		{
+			"name"		"Scotsman's Skullcutter"
+			"item_slot"	"melee"
+		}
+
+		"173"
+		{
+			"name"		"Vita-Saw"
+			"item_slot"	"melee"
+		}
+
+		"214"
+		{
+			"name"		"Powerjack"
+			"item_slot"	"melee"
+		}
+
+		"215"
+		{
+			"name"		"Degreaser"
+			"item_slot"	"primary"
+		}
+
+		"220"
+		{
+			"name"		"Shortstop"
+			"item_slot"	"primary"
+		}
+
+		"221"
+		{
+			"name"		"Holy Mackerel"
+			"item_slot"	"melee"
+		}
+
+		"222"
+		{
+			"name"		"Mad Milk"
+			"item_slot"	"secondary"
+		}
+
+		"224"
+		{
+			"name"		"L'Étranger"
+			"item_slot"	"secondary"
+		}
+
+		"225"
+		{
+			"name"		"Your Eternal Reward"
+			"item_slot"	"melee"
+		}
+
+		"226"
+		{
+			"name"		"Battalion's Backup"
+			"item_slot"	"secondary"
+		}
+
+		"228"
+		{
+			"name"		"Black Box"
+			"item_slot"	"primary"
+		}
+
+		"230"
+		{
+			"name"		"Sydney Sleeper"
+			"item_slot"	"primary"
+		}
+
+		"231"
+		{
+			"name"		"Darwin's Danger Shield"
+			"item_slot"	"secondary"
+		}
+
+		"232"
+		{
+			"name"		"Bushwacka"
+			"item_slot"	"melee"
+		}
+
+		"237"
+		{
+			"name"		"Rocket Jumper"
+			"item_slot"	"primary"
+		}
+
+		"239"
+		{
+			"name"		"Gloves of Running Urgently"
+			"item_slot"	"melee"
+		}
+
+		"264"
+		{
+			"name"		"Frying Pan"
+			"item_slot"	"melee"
+		}
+
+		"265"
+		{
+			"name"		"Sticky Jumper"
+			"item_slot"	"secondary"
+		}
+
+		"266"
+		{
+			"name"		"Horseless Headless Horsemann's Headtaker"
+			"item_slot"	"melee"
+		}
+
+		"297"
+		{
+			"name"		"Enthusiast's Timepiece"
+			"item_slot"	"pda2"
+		}
+
+		"298"
+		{
+			"name"		"Iron Curtain"
+			"item_slot"	"primary"
+		}
+
+		"304"
+		{
+			"name"		"Amputator"
+			"item_slot"	"melee"
+		}
+
+		"305"
+		{
+			"name"		"Crusader's Crossbow"
+			"item_slot"	"primary"
+		}
+
+		"307"
+		{
+			"name"		"Ullapool Caber"
+			"item_slot"	"melee"
+		}
+
+		"308"
+		{
+			"name"		"Loch-n-Load"
+			"item_slot"	"primary"
+		}
+
+		"310"
+		{
+			"name"		"Warrior's Spirit"
+			"item_slot"	"melee"
+		}
+
+		"311"
+		{
+			"name"		"Buffalo Steak Sandvich"
+			"item_slot"	"secondary"
+		}
+
+		"312"
+		{
+			"name"		"Brass Beast"
+			"item_slot"	"primary"
+		}
+
+		"317"
+		{
+			"name"		"Candy Cane"
+			"item_slot"	"melee"
+		}
+
+		"325"
+		{
+			"name"		"Boston Basher"
+			"item_slot"	"melee"
+		}
+
+		"326"
+		{
+			"name"		"Back Scratcher"
+			"item_slot"	"melee"
+		}
+
+		"327"
+		{
+			"name"		"Claidheamh Mòr"
+			"item_slot"	"melee"
+		}
+
+		"329"
+		{
+			"name"		"Jag"
+			"item_slot"	"melee"
+		}
+
+		"331"
+		{
+			"name"		"Fists of Steel"
+			"item_slot"	"melee"
+		}
+
+		"348"
+		{
+			"name"		"Sharpened Volcano Fragment"
+			"item_slot"	"melee"
+		}
+
+		"349"
+		{
+			"name"		"Sun-on-a-Stick"
+			"item_slot"	"melee"
+		}
+
+		"351"
+		{
+			"name"		"Detonator"
+			"item_slot"	"secondary"
+		}
+
+		"354"
+		{
+			"name"		"Concheror"
+			"item_slot"	"secondary"
+		}
+
+		"355"
+		{
+			"name"		"Fan O'War"
+			"item_slot"	"melee"
+		}
+
+		"356"
+		{
+			"name"		"Conniver's Kunai"
+			"item_slot"	"melee"
+		}
+
+		"357"
+		{
+			"name"		"Half-Zatoichi"
+			"item_slot"	"melee"
+		}
+
+		"378"
+		{
+			"name"		"Team Captain"
+			"item_slot"	"head"
+			"can_be_unusual"	"1"
+		}
+
+		"401"
+		{
+			"name"		"Shahanshah"
+			"item_slot"	"melee"
+		}
+
+		"402"
+		{
+			"name"		"Bazaar Bargain"
+			"item_slot"	"primary"
+		}
+
+		"404"
+		{
+			"name"		"Persian Persuader"
+			"item_slot"	"melee"
+		}
+
+		"405"
+		{
+			"name"		"Ali Baba's Wee Booties"
+			"item_slot"	"primary"
+		}
+
+		"406"
+		{
+			"name"		"Splendid Screen"
+			"item_slot"	"secondary"
+		}
+
+		"411"
+		{
+			"name"		"Quick-Fix"
+			"item_slot"	"secondary"
+		}
+
+		"412"
+		{
+			"name"		"Overdose"
+			"item_slot"	"primary"
+		}
+
+		"413"
+		{
+			"name"		"Solemn Vow"
+			"item_slot"	"melee"
+		}
+
+		"414"
+		{
+			"name"		"Liberty Launcher"
+			"item_slot"	"primary"
+		}
+
+		"415"
+		{
+			"name"		"Reserve Shooter"
+			"item_slot"	"secondary"
+		}
+
+		"416"
+		{
+			"name"		"Market Gardener"
+			"item_slot"	"melee"
+		}
+
+		"423"
+		{
+			"name"		"Saxxy"
+			"item_slot"	"melee"
+		}
+
+		"424"
+		{
+			"name"		"Tomislav"
+			"item_slot"	"primary"
+		}
+
+		"425"
+		{
+			"name"		"Family Business"
+			"item_slot"	"secondary"
+		}
+
+		"426"
+		{
+			"name"		"Eviction Notice"
+			"item_slot"	"melee"
+		}
+
+		"433"
+		{
+			"name"		"Fishcake"
+			"item_slot"	"secondary"
+		}
+
+		"441"
+		{
+			"name"		"Cow Mangler 5000"
+			"item_slot"	"primary"
+		}
+
+		"442"
+		{
+			"name"		"Righteous Bison"
+			"item_slot"	"secondary"
+		}
+
+		"444"
+		{
+			"name"		"Mantreads"
+			"item_slot"	"secondary"
+		}
+
+		"447"
+		{
+			"name"		"Disciplinary Action"
+			"item_slot"	"melee"
+		}
+
+		"448"
+		{
+			"name"		"Soda Popper"
+			"item_slot"	"primary"
+		}
+
+		"449"
+		{
+			"name"		"Winger"
+			"item_slot"	"secondary"
+		}
+
+		"450"
+		{
+			"name"		"Atomizer"
+			"item_slot"	"melee"
+		}
+
+		"452"
+		{
+			"name"		"Three-Rune Blade"
+			"item_slot"	"melee"
+		}
+
+		"457"
+		{
+			"name"		"Postal Pummeler"
+			"item_slot"	"melee"
+		}
+
+		"460"
+		{
+			"name"		"Enforcer"
+			"item_slot"	"secondary"
+		}
+
+		"461"
+		{
+			"name"		"Big Earner"
+			"item_slot"	"melee"
+		}
+
+		"466"
+		{
+			"name"		"Maul"
+			"item_slot"	"melee"
+		}
+
+		"474"
+		{
+			"name"		"Conscientious Objector"
+			"item_slot"	"melee"
+		}
+
+		"482"
+		{
+			"name"		"Nessie's Nine Iron"
+			"item_slot"	"melee"
+		}
+
+		"513"
+		{
+			"name"		"Original"
+			"item_slot"	"primary"
+		}
+
+		"525"
+		{
+			"name"		"Diamondback"
+			"item_slot"	"secondary"
+		}
+
+		"526"
+		{
+			"name"		"Machina"
+			"item_slot"	"primary"
+		}
+
+		"527"
+		{
+			"name"		"Widowmaker"
+			"item_slot"	"primary"
+		}
+
+		"528"
+		{
+			"name"		"Short Circuit"
+			"item_slot"	"secondary"
+		}
+
+		"572"
+		{
+			"name"		"Unarmed Combat"
+			"item_slot"	"melee"
+		}
+
+		"574"
+		{
+			"name"		"Wanga Prick"
+			"item_slot"	"melee"
+		}
+
+		"587"
+		{
+			"name"		"Apoco-Fists"
+			"item_slot"	"melee"
+		}
+
+		"588"
+		{
+			"name"		"Pomson 6000"
+			"item_slot"	"primary"
+		}
+
+		"589"
+		{
+			"name"		"Eureka Effect"
+			"item_slot"	"melee"
+		}
+
+		"593"
+		{
+			"name"		"Third Degree"
+			"item_slot"	"melee"
+		}
+
+		"594"
+		{
+			"name"		"Phlogistinator"
+			"item_slot"	"primary"
+		}
+
+		"595"
+		{
+			"name"		"Manmelter"
+			"item_slot"	"secondary"
+		}
+
+		"608"
+		{
+			"name"		"Bootlegger"
+			"item_slot"	"primary"
+		}
+
+		"609"
+		{
+			"name"		"Scottish Handshake"
+			"item_slot"	"melee"
+		}
+
+		"638"
+		{
+			"name"		"Sharp Dresser"
+			"item_slot"	"melee"
+		}
+
+		"642"
+		{
+			"name"		"Cozy Camper"
+			"item_slot"	"secondary"
+		}
+
+		"648"
+		{
+			"name"		"Wrap Assassin"
+			"item_slot"	"melee"
+		}
+
+		"649"
+		{
+			"name"		"Spy-Cicle"
+			"item_slot"	"melee"
+		}
+
+		"654"
+		{
+			"name"		"Festive Minigun"
+			"item_slot"	"primary"
+		}
+
+		"656"
+		{
+			"name"		"Holiday Punch"
+			"item_slot"	"melee"
+		}
+
+		"658"
+		{
+			"name"		"Festive Rocket Launcher"
+			"item_slot"	"primary"
+		}
+
+		"659"
+		{
+			"name"		"Festive Flame Thrower"
+			"item_slot"	"primary"
+		}
+
+		"660"
+		{
+			"name"		"Festive Bat"
+			"item_slot"	"melee"
+		}
+
+		"661"
+		{
+			"name"		"Festive Stickybomb Launcher"
+			"item_slot"	"secondary"
+		}
+
+		"662"
+		{
+			"name"		"Festive Wrench"
+			"item_slot"	"melee"
+		}
+
+		"663"
+		{
+			"name"		"Festive Medi Gun"
+			"item_slot"	"secondary"
+		}
+
+		"664"
+		{
+			"name"		"Festive Sniper Rifle"
+			"item_slot"	"primary"
+		}
+
+		"665"
+		{
+			"name"		"Festive Knife"
+			"item_slot"	"melee"
+		}
+
+		"669"
+		{
+			"name"		"Festive Scattergun"
+			"item_slot"	"primary"
+		}
+
+		"727"
+		{
+			"name"		"Black Rose"
+			"item_slot"	"melee"
+		}
+
+		"730"
+		{
+			"name"		"Beggar's Bazooka"
+			"item_slot"	"primary"
+		}
+
+		"735"
+		{
+			"name"		"Sapper"
+			"item_slot"	"building"
+		}
+
+		"739"
+		{
+			"name"		"Lollichop"
+			"item_slot"	"melee"
+		}
+
+		"740"
+		{
+			"name"		"Scorch Shot"
+			"item_slot"	"secondary"
+		}
+
+		"741"
+		{
+			"name"		"Rainblower"
+			"item_slot"	"primary"
+		}
+
+		"751"
+		{
+			"name"		"Cleaner's Carbine"
+			"item_slot"	"secondary"
+		}
+
+		"752"
+		{
+			"name"		"Hitman's Heatmaker"
+			"item_slot"	"primary"
+		}
+
+		"772"
+		{
+			"name"		"Baby Face's Blaster"
+			"item_slot"	"primary"
+		}
+
+		"773"
+		{
+			"name"		"Pretty Boy's Pocket Pistol"
+			"item_slot"	"secondary"
+		}
+
+		"775"
+		{
+			"name"		"Escape Plan"
+			"item_slot"	"melee"
+		}
+
+		"792"
+		{
+			"name"		"Silver Botkiller Sniper Rifle Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"793"
+		{
+			"name"		"Silver Botkiller Minigun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"794"
+		{
+			"name"		"Silver Botkiller Knife Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"795"
+		{
+			"name"		"Silver Botkiller Wrench Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"796"
+		{
+			"name"		"Silver Botkiller Medi Gun Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"797"
+		{
+			"name"		"Silver Botkiller Stickybomb Launcher Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"798"
+		{
+			"name"		"Silver Botkiller Flame Thrower Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"799"
+		{
+			"name"		"Silver Botkiller Scattergun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"800"
+		{
+			"name"		"Silver Botkiller Rocket Launcher Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"801"
+		{
+			"name"		"Gold Botkiller Sniper Rifle Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"802"
+		{
+			"name"		"Gold Botkiller Minigun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"803"
+		{
+			"name"		"Gold Botkiller Knife Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"804"
+		{
+			"name"		"Gold Botkiller Wrench Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"805"
+		{
+			"name"		"Gold Botkiller Medi Gun Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"806"
+		{
+			"name"		"Gold Botkiller Stickybomb Launcher Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"807"
+		{
+			"name"		"Gold Botkiller Flame Thrower Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"808"
+		{
+			"name"		"Gold Botkiller Scattergun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"809"
+		{
+			"name"		"Gold Botkiller Rocket Launcher Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"810"
+		{
+			"name"		"Red-Tape Recorder"
+			"item_slot"	"building"
+		}
+
+		"811"
+		{
+			"name"		"Huo-Long Heater"
+			"item_slot"	"primary"
+		}
+
+		"812"
+		{
+			"name"		"Flying Guillotine"
+			"item_slot"	"secondary"
+		}
+
+		"813"
+		{
+			"name"		"Neon Annihilator"
+			"item_slot"	"melee"
+		}
+
+		"850"
+		{
+			"name"		"Deflector"
+			"item_slot"	"primary"
+		}
+
+		"851"
+		{
+			"name"		"AWPer Hand"
+			"item_slot"	"primary"
+		}
+
+		"863"
+		{
+			"name"		"Robo-Sandvich"
+			"item_slot"	"secondary"
+		}
+
+		"880"
+		{
+			"name"		"Freedom Staff"
+			"item_slot"	"melee"
+		}
+
+		"881"
+		{
+			"name"		"Rust Botkiller Sniper Rifle Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"882"
+		{
+			"name"		"Rust Botkiller Minigun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"883"
+		{
+			"name"		"Rust Botkiller Knife Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"884"
+		{
+			"name"		"Rust Botkiller Wrench Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"885"
+		{
+			"name"		"Rust Botkiller Medi Gun Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"886"
+		{
+			"name"		"Rust Botkiller Stickybomb Launcher Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"887"
+		{
+			"name"		"Rust Botkiller Flame Thrower Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"888"
+		{
+			"name"		"Rust Botkiller Scattergun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"889"
+		{
+			"name"		"Rust Botkiller Rocket Launcher Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"890"
+		{
+			"name"		"Blood Botkiller Sniper Rifle Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"891"
+		{
+			"name"		"Blood Botkiller Minigun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"892"
+		{
+			"name"		"Blood Botkiller Knife Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"893"
+		{
+			"name"		"Blood Botkiller Wrench Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"894"
+		{
+			"name"		"Blood Botkiller Medi Gun Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"895"
+		{
+			"name"		"Blood Botkiller Stickybomb Launcher Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"896"
+		{
+			"name"		"Blood Botkiller Flame Thrower Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"897"
+		{
+			"name"		"Blood Botkiller Scattergun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"898"
+		{
+			"name"		"Blood Botkiller Rocket Launcher Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"899"
+		{
+			"name"		"Carbonado Botkiller Sniper Rifle Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"900"
+		{
+			"name"		"Carbonado Botkiller Minigun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"901"
+		{
+			"name"		"Carbonado Botkiller Knife Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"902"
+		{
+			"name"		"Carbonado Botkiller Wrench Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"903"
+		{
+			"name"		"Carbonado Botkiller Medi Gun Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"904"
+		{
+			"name"		"Carbonado Botkiller Stickybomb Launcher Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"905"
+		{
+			"name"		"Carbonado Botkiller Flame Thrower Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"906"
+		{
+			"name"		"Carbonado Botkiller Scattergun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"907"
+		{
+			"name"		"Carbonado Botkiller Rocket Launcher Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"908"
+		{
+			"name"		"Diamond Botkiller Sniper Rifle Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"909"
+		{
+			"name"		"Diamond Botkiller Minigun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"910"
+		{
+			"name"		"Diamond Botkiller Knife Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"911"
+		{
+			"name"		"Diamond Botkiller Wrench Mk.I"
+			"item_slot"	"melee"
+		}
+
+		"912"
+		{
+			"name"		"Diamond Botkiller Medi Gun Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"913"
+		{
+			"name"		"Diamond Botkiller Stickybomb Launcher Mk.I"
+			"item_slot"	"secondary"
+		}
+
+		"914"
+		{
+			"name"		"Diamond Botkiller Flame Thrower Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"915"
+		{
+			"name"		"Diamond Botkiller Scattergun Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"916"
+		{
+			"name"		"Diamond Botkiller Rocket Launcher Mk.I"
+			"item_slot"	"primary"
+		}
+
+		"933"
+		{
+			"name"		"Ap-Sap"
+			"item_slot"	"building"
+		}
+
+		"939"
+		{
+			"name"		"Bat Outta Hell"
+			"item_slot"	"melee"
+		}
+
+		"947"
+		{
+			"name"		"Quäckenbirdt"
+			"item_slot"	"pda2"
+		}
+
+		"954"
+		{
+			"name"		"Memory Maker"
+			"item_slot"	"melee"
+		}
+
+		"957"
+		{
+			"name"		"Silver Botkiller Sniper Rifle Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"958"
+		{
+			"name"		"Silver Botkiller Minigun Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"959"
+		{
+			"name"		"Silver Botkiller Knife Mk.II"
+			"item_slot"	"melee"
+		}
+
+		"960"
+		{
+			"name"		"Silver Botkiller Wrench Mk.II"
+			"item_slot"	"melee"
+		}
+
+		"961"
+		{
+			"name"		"Silver Botkiller Medi Gun Mk.II"
+			"item_slot"	"secondary"
+		}
+
+		"962"
+		{
+			"name"		"Silver Botkiller Stickybomb Launcher Mk.II"
+			"item_slot"	"secondary"
+		}
+
+		"963"
+		{
+			"name"		"Silver Botkiller Flame Thrower Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"964"
+		{
+			"name"		"Silver Botkiller Scattergun Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"965"
+		{
+			"name"		"Silver Botkiller Rocket Launcher Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"966"
+		{
+			"name"		"Gold Botkiller Sniper Rifle Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"967"
+		{
+			"name"		"Gold Botkiller Minigun Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"968"
+		{
+			"name"		"Gold Botkiller Knife Mk.II"
+			"item_slot"	"melee"
+		}
+
+		"969"
+		{
+			"name"		"Gold Botkiller Wrench Mk.II"
+			"item_slot"	"melee"
+		}
+
+		"970"
+		{
+			"name"		"Gold Botkiller Medi Gun Mk.II"
+			"item_slot"	"secondary"
+		}
+
+		"971"
+		{
+			"name"		"Gold Botkiller Stickybomb Launcher Mk.II"
+			"item_slot"	"secondary"
+		}
+
+		"972"
+		{
+			"name"		"Gold Botkiller Flame Thrower Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"973"
+		{
+			"name"		"Gold Botkiller Scattergun Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"974"
+		{
+			"name"		"Gold Botkiller Rocket Launcher Mk.II"
+			"item_slot"	"primary"
+		}
+
+		"996"
+		{
+			"name"		"Loose Cannon"
+			"item_slot"	"primary"
+		}
+
+		"997"
+		{
+			"name"		"Rescue Ranger"
+			"item_slot"	"primary"
+		}
+
+		"998"
+		{
+			"name"		"Vaccinator"
+			"item_slot"	"secondary"
+		}
+
+		"999"
+		{
+			"name"		"Festive Holy Mackerel"
+			"item_slot"	"melee"
+		}
+
+		"1000"
+		{
+			"name"		"Festive Axtinguisher"
+			"item_slot"	"melee"
+		}
+
+		"1001"
+		{
+			"name"		"Festive Buff Banner"
+			"item_slot"	"secondary"
+		}
+
+		"1002"
+		{
+			"name"		"Festive Sandvich"
+			"item_slot"	"secondary"
+		}
+
+		"1003"
+		{
+			"name"		"Festive Übersaw"
+			"item_slot"	"melee"
+		}
+
+		"1004"
+		{
+			"name"		"Festive Frontier Justice"
+			"item_slot"	"primary"
+		}
+
+		"1005"
+		{
+			"name"		"Festive Huntsman"
+			"item_slot"	"primary"
+		}
+
+		"1006"
+		{
+			"name"		"Festive Ambassador"
+			"item_slot"	"secondary"
+		}
+
+		"1007"
+		{
+			"name"		"Festive Grenade Launcher"
+			"item_slot"	"primary"
+		}
+
+		"1013"
+		{
+			"name"		"Ham Shank"
+			"item_slot"	"melee"
+		}
+
+		"1071"
+		{
+			"name"		"Golden Frying Pan"
+			"item_slot"	"melee"
+		}
+
+		"1071"
+		{
+			"name"		"Golden Frying Pan"
+			"item_slot"	"melee"
+		}
+
+		"1078"
+		{
+			"name"		"Festive Force-a-Nature"
+			"item_slot"	"primary"
+		}
+
+		"1079"
+		{
+			"name"		"Festive Crusader's Crossbow"
+			"item_slot"	"primary"
+		}
+
+		"1080"
+		{
+			"name"		"Festive Sapper"
+			"item_slot"	"building"
+		}
+
+		"1081"
+		{
+			"name"		"Festive Flare Gun"
+			"item_slot"	"secondary"
+		}
+
+		"1082"
+		{
+			"name"		"Festive Eyelander"
+			"item_slot"	"melee"
+		}
+
+		"1083"
+		{
+			"name"		"Festive Jarate"
+			"item_slot"	"secondary"
+		}
+
+		"1084"
+		{
+			"name"		"Festive Gloves of Running Urgently"
+			"item_slot"	"melee"
+		}
+
+		"1085"
+		{
+			"name"		"Festive Black Box"
+			"item_slot"	"primary"
+		}
+
+		"1086"
+		{
+			"name"		"Festive Wrangler"
+			"item_slot"	"secondary"
+		}
+
+		"1092"
+		{
+			"name"		"Fortified Compound"
+			"item_slot"	"primary"
+		}
+
+		"1098"
+		{
+			"name"		"Classic"
+			"item_slot"	"primary"
+		}
+
+		"1099"
+		{
+			"name"		"Tide Turner"
+			"item_slot"	"secondary"
+		}
+
+		"1100"
+		{
+			"name"		"Bread Bite"
+			"item_slot"	"melee"
+		}
+
+		"1101"
+		{
+			"name"		"B.A.S.E. Jumper"
+			"item_slot"	"secondary"
+		}
+
+		"1102"
+		{
+			"name"		"Snack Attack"
+			"item_slot"	"building"
+		}
+
+		"1103"
+		{
+			"name"		"Back Scatter"
+			"item_slot"	"primary"
+		}
+
+		"1104"
+		{
+			"name"		"Air Strike"
+			"item_slot"	"primary"
+		}
+
+		"1105"
+		{
+			"name"		"Self-Aware Beauty Mark"
+			"item_slot"	"secondary"
+		}
+
+		"1121"
+		{
+			"name"		"Mutated Milk"
+			"item_slot"	"secondary"
+		}
+
+		"1123"
+		{
+			"name"		"Necro Smasher"
+			"item_slot"	"melee"
+		}
+
+		"1127"
+		{
+			"name"		"Crossing Guard"
+			"item_slot"	"melee"
+		}
+
+		"1141"
+		{
+			"name"		"Festive Shotgun"
+			"item_slot"	"primary"
+		}
+
+		"1142"
+		{
+			"name"		"Festive Revolver"
+			"item_slot"	"secondary"
+		}
+
+		"1143"
+		{
+			"name"		"Festive Bonesaw"
+			"item_slot"	"melee"
+		}
+
+		"1144"
+		{
+			"name"		"Festive Chargin' Targe"
+			"item_slot"	"secondary"
+		}
+
+		"1145"
+		{
+			"name"		"Festive Bonk! Atomic Punch"
+			"item_slot"	"secondary"
+		}
+
+		"1146"
+		{
+			"name"		"Festive Backburner"
+			"item_slot"	"primary"
+		}
+
+		"1149"
+		{
+			"name"		"Festive SMG"
+			"item_slot"	"secondary"
+		}
+
+		"1150"
+		{
+			"name"		"Quickiebomb Launcher"
+			"item_slot"	"secondary"
+		}
+
+		"1151"
+		{
+			"name"		"Iron Bomber"
+			"item_slot"	"primary"
+		}
+
+		"1153"
+		{
+			"name"		"Panic Attack"
+			"item_slot"	"primary"
+		}
+
+		"1178"
+		{
+			"name"		"Dragon's Fury"
+			"item_slot"	"primary"
+		}
+
+		"1179"
+		{
+			"name"		"Thermal Thruster"
+			"item_slot"	"secondary"
+		}
+
+		"1180"
+		{
+			"name"		"Gas Passer"
+			"item_slot"	"secondary"
+		}
+
+		"1181"
+		{
+			"name"		"Hot Hand"
+			"item_slot"	"melee"
+		}
+
+		"1190"
+		{
+			"name"		"Second Banana"
+			"item_slot"	"secondary"
+		}
+
+		"1202"
+		{
+			"name"		"Reissued Lugermorph"
+			"item_slot"	"secondary"
+		}
+
+		"1205"
+		{
+			"name"		"Reissued Enthusiast's Timepiece"
+			"item_slot"	"pda2"
+		}
+
+		"1206"
+		{
+			"name"		"Reissued Iron Curtain"
+			"item_slot"	"primary"
+		}
+
+		"30474"
+		{
+			"name"		"Nostromo Napalmer"
+			"item_slot"	"primary"
+		}
+
+		"30665"
+		{
+			"name"		"Shooting Star"
+			"item_slot"	"primary"
+		}
+
+		"30666"
+		{
+			"name"		"C.A.P.P.E.R"
+			"item_slot"	"secondary"
+		}
+
+		"30667"
+		{
+			"name"		"Batsaber"
+			"item_slot"	"melee"
+		}
+
+		"30668"
+		{
+			"name"		"Giger Counter"
+			"item_slot"	"secondary"
+		}
+
+		"30758"
+		{
+			"name"		"Prinny Machete"
+			"item_slot"	"melee"
 		}
 	}
 
@@ -59,7 +2025,9 @@
 	// internal system names like "superrare_burning1", not display names).
 	"attribute_controlled_attached_particles"
 	{
-		"9"		"Green Energy"
+		"6"	"Green Confetti"
+		"7"	"Purple Confetti"
+		"9"	"Green Energy"
 		"10"	"Purple Energy"
 		"13"	"Burning Flames"
 		"14"	"Scorching Flames"

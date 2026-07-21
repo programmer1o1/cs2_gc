@@ -51,6 +51,23 @@ static bool SplitBracketNotation(std::string_view entryName, std::string_view &p
     return true;
 }
 
+// Parses "Australium Item Name" -> Item Name, same idea as the bracket
+// notation above but for the real "is_australium_item" attribute (2027)
+// instead of a particle effect. Real Australium weapons use this exact
+// display-name convention (base weapon name prefixed with "Australium "),
+// so it doubles as a schema lookup key with no separate bracket needed.
+static bool SplitAustraliumPrefix(std::string_view &itemName)
+{
+    constexpr std::string_view prefix = "Australium ";
+    if (itemName.substr(0, prefix.size()) != prefix)
+    {
+        return false;
+    }
+
+    itemName.remove_prefix(prefix.size());
+    return true;
+}
+
 bool InventoryTF2::ParseFromFile(const char *path, const ItemSchemaTF2 &schema)
 {
     KeyValue root{ "root" };
@@ -70,6 +87,7 @@ bool InventoryTF2::ParseFromFile(const char *path, const ItemSchemaTF2 &schema)
         std::string_view particleName;
         std::string_view itemName;
         bool isUnusual = SplitBracketNotation(entryKey.Name(), particleName, itemName);
+        bool isAustralium = !isUnusual && SplitAustraliumPrefix(itemName);
 
         const ItemSchemaTF2::ItemInfo *itemInfo = schema.ItemInfoByName(itemName);
         if (!itemInfo)
@@ -108,6 +126,11 @@ bool InventoryTF2::ParseFromFile(const char *path, const ItemSchemaTF2 &schema)
             entry.hasParticle = true;
             entry.particleId = particleInfo->id;
             entry.particleName = particleInfo->name;
+        }
+        else if (isAustralium)
+        {
+            entry.quality = ItemSchemaTF2::QualityStrange;
+            entry.isAustralium = true;
         }
         else
         {

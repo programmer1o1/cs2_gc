@@ -20,6 +20,11 @@ struct InventoryEntryTF2
     uint32_t particleId{};
     std::string particleName;
 
+    // "Australium ItemName" prefix notation: real Australium weapons aren't
+    // a separate defindex, just the base weapon carrying attribute 2027
+    // ("is_australium_item") and visual style index 1 (see item_schema.h).
+    bool isAustralium{};
+
     uint32_t count{};
 };
 

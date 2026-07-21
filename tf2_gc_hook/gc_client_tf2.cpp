@@ -123,6 +123,20 @@ static void BuildEconItem(const InventoryEntryTF2 &entry, uint64_t itemId, uint3
         float particleValue = static_cast<float>(entry.particleId);
         attr->set_value_bytes(&particleValue, sizeof(particleValue));
     }
+
+    if (entry.isAustralium)
+    {
+        item.set_style(StyleAustraliumGoldTF2);
+
+        CSOEconItemAttribute *attr = item.add_attribute();
+        attr->set_def_index(AttributeIsAustraliumItemTF2);
+
+        // "is_australium_item" is stored_as_integer in the real schema (per
+        // its attributes block), unlike the particle-effect float above --
+        // encode the raw int32 bytes, not a float bit-pattern.
+        int32_t isAustralium = 1;
+        attr->set_value_bytes(&isAustralium, sizeof(isAustralium));
+    }
 }
 
 ClientGCTF2::ClientGCTF2(uint64_t steamId)
