@@ -234,6 +234,11 @@ void ClientGCTF2::AddToMultipleObjects(CMsgSOMultipleObjects &message, uint32_t 
     {
         // Same owner/owner_soid double-set as BuildBackpackSOCache -- TF2's
         // real client only reads "owner" (see docs/tf2_live_hook.md).
+        // "version" also has to be set here -- csgo_gc/inventory.cpp's
+        // AddToMultipleObjects sets this same fixed constant on every
+        // CMsgSOMultipleObjects it builds; leaving it unset here is a likely
+        // reason equip updates were silently ignored (see gc_const_tf2.h).
+        message.set_version(InventoryVersionTF2);
         message.set_owner(m_steamId);
         message.mutable_owner_soid()->set_type(SoIdTypeSteamId);
         message.mutable_owner_soid()->set_id(m_steamId);
@@ -345,6 +350,15 @@ void ClientGCTF2::BuildBackpackSOCache(CMsgSOCacheSubscribed &message, bool equi
     // so "owner" was never set at all here, meaning the real client attached
     // our items to a bogus owner=0 cache instead of the local player's own).
     // Set both for safety.
+    //
+    // "version" also has to be set -- csgo_gc/inventory.cpp's
+    // BuildCacheSubscription sets this same fixed constant on every
+    // CMsgSOCacheSubscribed it builds. Leaving it unset (defaulting to 0)
+    // is a likely reason the loadout screen never reflected equip changes:
+    // GCSDK's shared object cache tracks a per-cache version and can treat
+    // an update that doesn't look newer than what it already has as stale
+    // and drop it silently (no parse/validation error either side).
+    message.set_version(InventoryVersionTF2);
     message.set_owner(m_steamId);
     message.mutable_owner_soid()->set_type(SoIdTypeSteamId);
     message.mutable_owner_soid()->set_id(m_steamId);

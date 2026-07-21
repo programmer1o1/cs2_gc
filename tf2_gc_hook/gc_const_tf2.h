@@ -37,3 +37,14 @@ constexpr uint32_t ItemOriginBaseItemTF2 = 22;
 // econ_item_inventory.cpp).
 constexpr uint64_t ItemIdInvalidTF2 = 0;
 constexpr uint32_t SlotUnequipTF2 = 0xffff;
+
+// CMsgSOCacheSubscribed/CMsgSOMultipleObjects.version -- csgo_gc/inventory.cpp
+// sets this same fixed nonzero constant (InventoryVersion) on every SO cache
+// message it sends (BuildCacheSubscription, AddToMultipleObjects,
+// ToSingleObject). We never set it at all here, which is a likely reason
+// equip updates (CMsgSOMultipleObjects) got silently ignored client-side
+// even though the message demonstrably arrived (no parse/validation
+// errors): GCSDK's shared object cache tracks a version per cache and may
+// drop updates that don't look newer than what it already has, and an
+// entirely absent/zero version is the least "new" a message can look.
+constexpr uint64_t InventoryVersionTF2 = 7523377975160828514;
