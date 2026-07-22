@@ -1,19 +1,23 @@
-# csgo_gc
+# valve_gc
 
 > [!NOTE]
-> This is a **fork** of [mikkokko/csgo_gc](https://github.com/mikkokko/csgo_gc) focused on getting the
-> Game Coordinator working with **Counter-Strike 2**. It has diverged substantially from upstream:
-> the client now completes the CS2 GC handshake, loadouts load, equipped skins/gloves/agents apply in
-> offline/listen-server matches, loadout changes persist, and case opening adds the unboxed item to your
-> inventory. It is still experimental — expect rough edges.
+> This is a **fork** of [mikkokko/csgo_gc](https://github.com/mikkokko/csgo_gc), originally focused on
+> getting the Game Coordinator working with **Counter-Strike 2**, and has since grown a second,
+> independent **Team Fortress 2** GC implementation alongside it. It has diverged substantially from
+> upstream: on the CS:GO/CS2 side, the client completes the GC handshake, loadouts load, equipped
+> skins/gloves/agents apply in offline/listen-server matches, loadout changes persist, and case opening
+> adds the unboxed item to your inventory. On the TF2 side (`tf2_gc_hook`), the client completes its own
+> GC handshake, backpack/loadout display works (hats, Unusual particle effects, Australium weapons, every
+> class weapon), item deletion works, and equip changes persist and apply in-match. It is still
+> experimental — expect rough edges, especially in the newer TF2 support.
 
 ## What is this?
-In Valve games, the Game Coordinator (GC) is a backend service most notably responsible for matchmaking and inventory management (like loadouts and skins). This project redirects the GC traffic to a custom, in-process implementation, so your inventory is driven by a local `inventory.txt` instead of Valve's servers.
+In Valve games, the Game Coordinator (GC) is a backend service most notably responsible for matchmaking and inventory management (like loadouts and skins). This project redirects the GC traffic to a custom, in-process implementation, so your inventory is driven by a local `inventory.txt` (CS:GO/CS2) or `tf2_inventory.txt` (TF2) instead of Valve's servers.
 
 ## Why would you want this?
-It restores most GC-related, inventory-side functionality (loadouts, skins, knives, gloves, agents, case opening, etc.) locally, without relying on a centralized server.
+It restores most GC-related, inventory-side functionality (loadouts, skins, knives, gloves, agents, case opening, Unusual/Australium items, etc.) locally, without relying on a centralized server.
 
-## Current features
+## Current features (CS:GO / CS2)
 - Editable inventory (`inventory.txt`)
 - Loadout editing that **persists** (weapon/skin changes, base-weapon swaps like USP-S/P2000, save across restarts)
 - Equipped items apply **in matches** (offline practice / bots / your own listen server)
@@ -34,10 +38,22 @@ It restores most GC-related, inventory-side functionality (loadouts, skins, kniv
 - Windows, Linux and macOS support
 - Networking using Steam's P2P interface
 
+## Current features (Team Fortress 2)
+A separate, independent GC implementation (`tf2_gc_hook`) reusing the same generic hooking/handshake
+plumbing described above. See [docs/tf2_live_hook.md](docs/tf2_live_hook.md) for the full write-up.
+- Editable inventory (`tf2_gc/tf2_inventory.txt`) driven by a real, verified subset of `items_game.txt`
+  (`tf2_gc/tf2_items_game.txt`) — every class weapon (stock + unlocks), Unusual hats with real particle
+  effects, Australium weapons (correct gold skin via the same defindex/style mechanism the real client
+  uses), and the Golden Frying Pan
+- Loadout editing that **persists** across restarts
+- Equipped items apply **in matches** (offline practice / your own listen server)
+- Item deletion
+- Windows support
+
 ## Scope / limitations
-- **Skins only apply on servers running csgo_gc** — i.e. offline practice, workshop maps, or your own
-  listen/dedicated server. Valve matchmaking and community servers run their own GC and will show
-  default weapons; this cannot be changed.
+- **Skins/loadouts only apply on servers running this project** — i.e. offline practice, workshop maps,
+  or your own listen/dedicated server. Valve matchmaking and community servers run their own GC and will
+  show default weapons; this cannot be changed.
 - **Matchmaking is not supported** and can't be (it requires a centralized server).
 - **Case opening shows an error dialog instead of the unbox reveal.** The unbox itself works — the
   client unboxes via a Game Coordinator *job* (`k_EMsgGCOpenCrate`), the local GC creates the item and
@@ -46,7 +62,7 @@ It restores most GC-related, inventory-side functionality (loadouts, skins, kniv
 
 ## Installation
 - Download the game from Steam
-- Download the latest build for your platform from the [releases page](https://github.com/programmer1o1/csgo_gc/releases) (the `continuous` release is built automatically from the latest commit)
+- Download the latest build for your platform from the [releases page](https://github.com/programmer1o1/valve_gc/releases) (the `continuous` release is built automatically from the latest commit)
 - Navigate to the game's installation directory
 - Back up your existing launcher executables as they'll be overwritten (e.g. `csgo.exe`, `cs2.exe`, `srcds.exe`, `csgo_linux64`, etc.)
 - Extract the contents of the downloaded archive to your game directory, replacing the executables when prompted
@@ -54,8 +70,12 @@ It restores most GC-related, inventory-side functionality (loadouts, skins, kniv
 - macOS users: the release binaries are not notarized, so you'll have to deal with that on your end
 
 ## Inventory editing
-Edit `csgo_gc/inventory.txt` (in the game's `game/` directory) directly, or use a GUI editor.
+**CS:GO/CS2:** edit `csgo_gc/inventory.txt` (in the game's `game/` directory) directly, or use a GUI editor.
 A manual-editing guide made by someone else is [here](https://gist.github.com/dricotec/1ae3deb06c42012970c00df914348e76).
+
+**TF2:** edit `tf2_gc/tf2_inventory.txt` (and `tf2_gc/tf2_items_game.txt` for the item schema) in the
+game's install directory. See [examples/tf2_unusual_inventory.txt](examples/tf2_unusual_inventory.txt)
+and [examples/tf2_items_game.txt](examples/tf2_items_game.txt) for the format.
 
 > [!TIP]
 > The game rewrites `inventory.txt` whenever you change your loadout in the menu, so do any manual or
@@ -98,7 +118,7 @@ This project is licensed under the 2-Clause BSD License. See [LICENSE.md](LICENS
 ## Credits
 * **Mikko Kokko** — Original author of [csgo_gc](https://github.com/mikkokko/csgo_gc)
 * **Theeto** — Code reused from the predecessor project, unusual loot lists
-* Fork maintainer — CS2 GC connectivity, in-match inventory, gloves/agents, loadout persistence, and case-opening work
+* Fork maintainer — CS2 GC connectivity, in-match inventory, gloves/agents, loadout persistence, and case-opening work, plus the independent TF2 GC implementation (`tf2_gc_hook`)
 
 ## Third party dependencies
 - [Crypto++](https://github.com/weidai11/cryptopp) ([Boost Software License](https://github.com/weidai11/cryptopp/blob/master/License.txt))

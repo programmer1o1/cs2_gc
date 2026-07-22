@@ -1,13 +1,17 @@
 # csgo_gc — Architecture & Internals
 
-This document explains, in detail, how `csgo_gc` works: how it injects itself into the
-game, how it impersonates Valve's Game Coordinator (GC), how inventory and loadouts are
-modeled, and how each user-visible feature (loadouts, in-match skins, case opening) flows
+This document explains, in detail, how the CS:GO/CS2 side of this project (`csgo_gc/`) works: how it
+injects itself into the game, how it impersonates Valve's Game Coordinator (GC), how inventory and
+loadouts are modeled, and how each user-visible feature (loadouts, in-match skins, case opening) flows
 end to end. It is aimed at developers who want to modify or reason about the code.
 
-> This is the **CS2-focused fork** of [mikkokko/csgo_gc](https://github.com/mikkokko/csgo_gc).
+> This project (`valve_gc`) is a **fork** of [mikkokko/csgo_gc](https://github.com/mikkokko/csgo_gc).
 > File/line references point at the current tree; treat them as a guide, not a contract — read
 > the code next to this doc.
+>
+> For the independent **Team Fortress 2** GC implementation (`tf2_gc_hook/`), which reuses this same
+> hooking/handshake plumbing but has its own inventory/item-schema/equip logic, see
+> [tf2_live_hook.md](tf2_live_hook.md) instead.
 
 ---
 
