@@ -588,15 +588,13 @@ equipped-only push) and `AddToMultipleObjects` (equip/unequip updates).
 through unchanged (no re-serialization), so the appended field survives the
 whole client -> server relay path intact.
 
-Also noticed but **not yet fixed** (separate, lower-priority finding from
-the same decompiled source): the real GC serializes `CSOEconItemAttribute`
-values via `set_value_bytes()` (raw byte stream from
-`ConvertEconAttributeValueToByteStream`), not the generic `value` uint32
-field we use for the particle-effect attribute in `BuildEconItem`. Both
-fields exist in our checked-in proto (unlike `contains_equipped_state_v2`),
-so this would be a normal field change, not another manual-append case --
-worth revisiting if Unusual particle effects don't render correctly even
-after the equip fix above.
+**Fixed in a later session** (was previously noted here as "not yet fixed"):
+the real GC serializes `CSOEconItemAttribute` values via `set_value_bytes()`
+(raw byte stream from `ConvertEconAttributeValueToByteStream`), not the
+generic `value` uint32 field `BuildEconItem` originally used for the
+particle-effect attribute. Confirmed live that this was exactly why Unusual
+particle effects rendered the hat's quality correctly but never showed the
+actual effect -- switched to `set_value_bytes()` and it started working.
 
 Also cleaned up unconditional `Platform::Print("Failed to register
 round_mvp listener\n")`/`"...server-side round_mvp listener\n"` spam every
