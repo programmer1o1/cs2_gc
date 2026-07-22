@@ -1,5 +1,10 @@
 # TF2 live GC hook
 
+> Part of [`valve_gc`](../README.md) (formerly `csgo_gc`) -- the independent Team Fortress 2
+> Game Coordinator implementation, alongside the CS:GO/CS2 one documented in
+> [docs/README.md](README.md). The `csgo_gc`/`tf2_gc` names below are unchanged directory/target
+> names, not the overall project name.
+
 This documents the `tf2_gc` target: a second, separate GC dylib that wires
 milestone 1's TF2 item-schema/inventory parser (`tf2_gc/`) into the same
 hook/threading/job-id plumbing `csgo_gc` uses for CS:GO/CS2.
